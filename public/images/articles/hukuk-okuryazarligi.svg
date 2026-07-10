@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Hukuk okuryazarlığı kapak görseli</title>
+  <desc id="desc">Lacivert, krem ve altın tonlarında kitap ve adalet terazisi.</desc>
+  <rect width="1200" height="675" fill="#FAF7F2"/>
+  <rect x="80" y="80" width="1040" height="515" fill="#0B1F3A"/>
+  <path d="M180 495h330c50 0 82 18 90 52 8-34 40-52 90-52h330V166H690c-50 0-82 18-90 52-8-34-40-52-90-52H180v329Z" fill="#F1E8DA"/>
+  <path d="M600 220v326" stroke="#C9A24B" stroke-width="8"/>
+  <path d="M300 248h205M300 306h235M300 364h185M695 248h205M695 306h235M695 364h185" stroke="#0B1F3A" stroke-width="14" stroke-linecap="round" opacity=".78"/>
+  <path d="M600 176v-34M506 184h188M533 184l-58 118h116l-58-118ZM667 184l-58 118h116l-58-118Z" stroke="#C9A24B" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

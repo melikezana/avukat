@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">İfade verme kapak görseli</title>
+  <desc id="desc">Ceza hukuku için tutanak, kalem ve adalet çizgileri.</desc>
+  <rect width="1200" height="675" fill="#FAF7F2"/>
+  <path d="M0 0h1200v230H0z" fill="#0B1F3A"/>
+  <rect x="290" y="118" width="620" height="430" fill="#fff" stroke="#0B1F3A" stroke-width="14"/>
+  <path d="M354 205h306M354 268h390M354 331h330M354 394h245" stroke="#0B1F3A" stroke-width="13" stroke-linecap="round" opacity=".72"/>
+  <path d="M768 385 930 223l54 54-162 162-78 24 24-78Z" fill="#C9A24B"/>
+  <path d="M768 385 930 223l54 54-162 162-78 24 24-78Z" stroke="#0B1F3A" stroke-width="12" stroke-linejoin="round"/>
+  <circle cx="600" cy="132" r="54" fill="#C9A24B" stroke="#0B1F3A" stroke-width="12"/>
+  <path d="M578 132h44M600 110v44" stroke="#0B1F3A" stroke-width="10" stroke-linecap="round"/>
+</svg>
