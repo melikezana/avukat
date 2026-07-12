@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { contactInfo } from "@/lib/site-profile";
 
 type ContactPayload = {
   name?: string;
@@ -19,12 +20,12 @@ export async function POST(request: Request) {
   }
 
   const resendApiKey = process.env.RESEND_API_KEY;
-  const contactTo = process.env.CONTACT_TO_EMAIL ?? "info@idrisdagkesen.av.tr";
-  const contactFrom = process.env.CONTACT_FROM_EMAIL ?? "web@idrisdagkesen.av.tr";
+  const contactTo = process.env.CONTACT_TO_EMAIL ?? contactInfo.email;
+  const contactFrom = process.env.CONTACT_FROM_EMAIL ?? contactInfo.email;
 
   // API anahtarı yoksa form yerel geliştirmede başarılı döner ve mesajı loglar.
   if (!resendApiKey) {
-    console.info("İletişim formu placeholder modu:", {
+    console.info("İletişim formu yerel önizleme modu:", {
       name,
       email,
       subject,
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       preview: true,
-      message: "Mesaj alındı. E-posta entegrasyonu için Resend API anahtarı bekleniyor."
+      message: "Mesajınız alındı. En kısa sürede dönüş yapılacaktır."
     });
   }
 
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        message: "E-posta gönderimi sırasında bir sorun oluştu. Lütfen daha sonra tekrar deneyin."
+        message: "Mesaj gönderilirken bir sorun oluştu. Lütfen daha sonra tekrar deneyin."
       },
       { status: 502 }
     );

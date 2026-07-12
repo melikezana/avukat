@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
   <title id="title">Kira uyuşmazlıkları kapak görseli</title>
   <desc id="desc">Sözleşme, anahtar ve apartman çizgileri.</desc>
-  <rect width="1200" height="675" fill="#0B1F3A"/>
-  <rect x="96" y="94" width="1008" height="487" fill="#FAF7F2"/>
-  <path d="M174 581V285l210-150 210 150v296" fill="#F1E8DA"/>
-  <path d="M174 285 384 135l210 150M232 581V322h304v259" stroke="#0B1F3A" stroke-width="16" fill="none" stroke-linejoin="round"/>
-  <rect x="684" y="168" width="282" height="354" fill="#fff" stroke="#0B1F3A" stroke-width="14"/>
-  <path d="M732 240h186M732 304h150M732 368h186" stroke="#0B1F3A" stroke-width="12" stroke-linecap="round" opacity=".72"/>
-  <circle cx="813" cy="459" r="38" fill="none" stroke="#C9A24B" stroke-width="14"/>
-  <path d="M849 459h92v38h-35v35h-34" stroke="#C9A24B" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="1200" height="675" fill="#0A1628"/>
+  <rect x="96" y="94" width="1008" height="487" fill="#FAF7F1"/>
+  <path d="M174 581V285l210-150 210 150v296" fill="#EFE6D8"/>
+  <path d="M174 285 384 135l210 150M232 581V322h304v259" stroke="#0A1628" stroke-width="16" fill="none" stroke-linejoin="round"/>
+  <rect x="684" y="168" width="282" height="354" fill="#fff" stroke="#0A1628" stroke-width="14"/>
+  <path d="M732 240h186M732 304h150M732 368h186" stroke="#0A1628" stroke-width="12" stroke-linecap="round" opacity=".72"/>
+  <circle cx="813" cy="459" r="38" fill="none" stroke="#7A1F2B" stroke-width="14"/>
+  <path d="M849 459h92v38h-35v35h-34" stroke="#B8965A" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

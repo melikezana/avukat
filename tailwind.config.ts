@@ -10,28 +10,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        background: "#FAF7F1",
+        primary: "#0A1628",
+        "accent-1": "#7A1F2B",
+        "accent-2": "#B8965A",
+        "text-muted": "#5C5854",
+        muted: "#5C5854",
         navy: {
-          950: "#07172B",
-          900: "#0B1F3A",
-          800: "#123154"
+          950: "#07111F",
+          900: "#0A1628",
+          800: "#14243A"
         },
         gold: {
-          500: "#C9A24B",
-          600: "#A9842F"
+          500: "#B8965A",
+          600: "#9B7D47"
         },
         cream: {
-          50: "#FAF7F2",
-          100: "#F1E8DA"
+          50: "#FAF7F1",
+          100: "#EFE6D8"
         },
-        ink: "#1D2430"
+        burgundy: "#7A1F2B",
+        ink: "#0A1628"
       },
       fontFamily: {
         sans: ["var(--font-body)"],
         serif: ["var(--font-display)"]
       },
       boxShadow: {
-        soft: "0 18px 60px rgba(11, 31, 58, 0.08)",
-        gold: "0 16px 36px rgba(201, 162, 75, 0.16)"
+        soft: "0 18px 60px rgba(10, 22, 40, 0.08)",
+        brand: "0 18px 50px rgba(122, 31, 43, 0.15)",
+        gold: "0 16px 36px rgba(184, 150, 90, 0.16)"
       }
     }
   },

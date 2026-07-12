@@ -7,7 +7,7 @@ import { getAllArticles, getArticleCategories } from "@/lib/articles";
 export const metadata: Metadata = {
   title: "Makaleler",
   description:
-    "Av. İdris Dağkesen'in sade dilli hukuk makaleleri, kategori filtresi ve arama deneyimiyle listelenir."
+    "Av. İdris Dağkesen'in anlaşılır hukuk yazıları kategori filtresi ve arama deneyimiyle listelenir."
 };
 
 export default function ArticlesPage() {
@@ -18,8 +18,8 @@ export default function ArticlesPage() {
     <>
       <PageHeader
         eyebrow="Makaleler"
-        title="Hukuki süreçleri herkesin anlayabileceği bir dille okuyun."
-        description="Günlük hayatta karşılaşılan hukuki sorulara, kavramlara ve süreçlere dair pratik yazılar."
+        title="Hukuki konuları kısa, açık ve güven veren yazılarla okuyun."
+        description="Günlük hayatta karşılaşılan hukuki sorulara, kavramlara ve süreçlere dair anlaşılır içerikler."
       />
       <section className="bg-white py-16 md:py-20">
         <Container>

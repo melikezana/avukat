@@ -32,13 +32,13 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
       <div className="mb-8 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
         <label className="relative block">
           <span className="sr-only">Makalelerde ara</span>
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gold-600" aria-hidden />
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-accent-1" aria-hidden />
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Başlık, konu veya kategori ara"
-            className="h-12 w-full rounded-[6px] border border-navy-900/12 bg-cream-50 pl-12 pr-4 text-sm outline-none transition placeholder:text-ink/45 focus:border-gold-500 focus:bg-white"
+            className="h-12 w-full rounded-[6px] border border-primary/10 bg-background pl-12 pr-4 text-sm outline-none transition placeholder:text-muted/60 focus:border-accent-1 focus:bg-white"
           />
         </label>
 
@@ -51,8 +51,8 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
               className={cn(
                 "rounded-[6px] border px-4 py-2 text-sm font-semibold transition",
                 category === item
-                  ? "border-navy-900 bg-navy-900 text-white"
-                  : "border-navy-900/12 bg-cream-50 text-navy-900 hover:border-gold-500 hover:text-gold-600"
+                  ? "border-accent-1 bg-accent-1 text-white"
+                  : "border-primary/10 bg-background text-primary hover:border-accent-2 hover:text-accent-1"
               )}
             >
               {item}
@@ -68,9 +68,9 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
           ))}
         </div>
       ) : (
-        <div className="rounded-[8px] border border-navy-900/10 bg-cream-50 p-8 text-center">
-          <p className="font-serif text-2xl font-bold text-navy-900">Sonuç bulunamadı</p>
-          <p className="mt-2 text-ink/70">Arama kelimesini sadeleştirerek tekrar deneyebilirsiniz.</p>
+        <div className="rounded-[8px] border border-primary/10 bg-background p-8 text-center">
+          <p className="font-serif text-2xl font-bold text-primary">Sonuç bulunamadı</p>
+          <p className="mt-2 text-muted">Daha kısa bir arama ifadesiyle tekrar deneyebilirsiniz.</p>
         </div>
       )}
     </div>
