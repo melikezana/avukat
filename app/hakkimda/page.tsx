@@ -112,7 +112,7 @@ export default function AboutPage() {
           {[
             ["Çalışma ilkesi", "Önce kişiyi dinlemek, sonra seçenekleri açık ve gerçekçi biçimde anlatmak."],
             ["Yayın dili", "Teknik kavramları günlük hayattan örneklerle takip edilebilir hale getirmek."],
-            ["Odak", "Ceza, aile, iş, ticaret, tüketici ve kira hukuku gibi sık karşılaşılan alanlar."]
+            ["Odak", "Kira, iş, aile, ceza, ticaret ve gayrimenkul hukuku gibi sık karşılaşılan alanlar."]
           ].map(([title, text]) => (
             <Reveal key={title}>
               <div className="border-l-2 border-accent-1 pl-5">

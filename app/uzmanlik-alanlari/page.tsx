@@ -9,7 +9,7 @@ import { practiceAreas } from "@/lib/data/practice-areas";
 export const metadata: Metadata = {
   title: "Uzmanlık Alanları",
   description:
-    "Ceza hukuku, aile hukuku, ticaret hukuku, iş hukuku ve diğer hizmet alanlarına dair anlaşılır bilgiler."
+    "Kira, iş, aile, ceza, ticaret ve gayrimenkul hukuku alanlarına dair anlaşılır bilgiler."
 };
 
 export default function PracticeAreasPage() {

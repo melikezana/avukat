@@ -20,18 +20,10 @@ export async function POST(request: Request) {
   }
 
   const resendApiKey = process.env.RESEND_API_KEY;
-  const contactTo = process.env.CONTACT_TO_EMAIL ?? contactInfo.email;
-  const contactFrom = process.env.CONTACT_FROM_EMAIL ?? contactInfo.email;
+  const contactEmail = process.env.CONTACT_EMAIL ?? process.env.CONTACT_TO_EMAIL ?? contactInfo.email;
+  const contactFrom = process.env.CONTACT_FROM_EMAIL ?? contactEmail;
 
-  // API anahtarı yoksa form yerel geliştirmede başarılı döner ve mesajı loglar.
   if (!resendApiKey) {
-    console.info("İletişim formu yerel önizleme modu:", {
-      name,
-      email,
-      subject,
-      message
-    });
-
     return NextResponse.json({
       ok: true,
       preview: true,
@@ -47,7 +39,7 @@ export async function POST(request: Request) {
     },
     body: JSON.stringify({
       from: contactFrom,
-      to: contactTo,
+      to: contactEmail,
       reply_to: email,
       subject: `Web sitesi iletişim: ${subject}`,
       text: `Ad Soyad: ${name}\nE-posta: ${email}\nKonu: ${subject}\n\n${message}`

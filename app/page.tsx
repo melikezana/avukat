@@ -33,11 +33,11 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="overflow-hidden border-b border-primary/10 bg-background">
-        <Container className="grid items-center gap-12 py-12 md:py-16 lg:grid-cols-[1.04fr_0.96fr] lg:py-24">
+      <section className="overflow-hidden border-b border-gold-500/25 bg-cream-50">
+        <Container className="grid items-center gap-12 py-12 md:py-16 lg:grid-cols-[0.95fr_1.05fr] lg:py-24">
           <Reveal className="lg:order-1">
-            <p className="mb-5 inline-flex items-center gap-2 border border-accent-1/25 bg-white/75 px-3 py-2 text-sm font-medium text-accent-1">
-              <Scale className="h-4 w-4" aria-hidden />
+            <p className="mb-5 inline-flex items-center gap-2 rounded-[6px] border border-gold-500/35 bg-white/80 px-3 py-2 text-sm font-semibold text-primary shadow-[0_10px_28px_rgba(10,22,40,0.06)]">
+              <Scale className="h-4 w-4 text-gold-500" aria-hidden />
               {lawyerProfile.name}
             </p>
             <h1 className="max-w-3xl font-serif text-5xl font-bold leading-[1.05] text-primary md:text-6xl">
@@ -51,31 +51,29 @@ export default function HomePage() {
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/makaleler"
-                className="inline-flex items-center justify-center gap-2 rounded-[6px] bg-accent-1 px-5 py-3 text-sm font-semibold text-white shadow-brand transition duration-300 hover:bg-accent-2 hover:text-primary"
+                className="inline-flex items-center justify-center gap-2 rounded-[6px] bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_42px_rgba(10,22,40,0.18)] transition duration-300 hover:bg-gold-500 hover:text-primary"
               >
                 Hukuk Yazılarını İncele
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
               <Link
                 href="/iletisim"
-                className="inline-flex items-center justify-center gap-2 rounded-[6px] border border-accent-1/25 bg-white px-5 py-3 text-sm font-semibold text-accent-1 transition duration-300 hover:border-accent-2 hover:text-accent-2"
+                className="inline-flex items-center justify-center gap-2 rounded-[6px] border border-gold-500/45 bg-white px-5 py-3 text-sm font-semibold text-primary transition duration-300 hover:border-primary hover:text-primary"
               >
                 Danışmanlık İçin İletişime Geç
               </Link>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-y-3 text-sm font-semibold text-primary">
-              {trustBadges.map((badge, index) => {
+            <div className="mt-8 flex flex-wrap items-center gap-3 text-sm font-semibold text-primary">
+              {trustBadges.map((badge) => {
                 const Icon = badge.icon;
 
                 return (
                   <span
                     key={badge.label}
-                    className={`inline-flex items-center gap-2 pr-4 ${
-                      index > 0 ? "border-l border-accent-1/30 pl-4" : ""
-                    }`}
+                    className="inline-flex items-center gap-2 rounded-[6px] border border-gold-500/25 bg-white/75 px-3 py-2 shadow-[0_8px_24px_rgba(10,22,40,0.05)]"
                   >
-                    <Icon className="h-4 w-4 text-accent-1" aria-hidden />
+                    <Icon className="h-4 w-4 text-gold-500" aria-hidden />
                     {badge.label}
                   </span>
                 );
@@ -84,28 +82,27 @@ export default function HomePage() {
           </Reveal>
 
           <Reveal delay={0.12} className="order-first lg:order-2">
-            <div className="relative mx-auto max-w-[460px]">
-              <div
-                className="absolute -inset-4 rounded-[42%_58%_50%_50%/46%_42%_58%_54%] bg-accent-1/10"
-                aria-hidden
-              />
-              <div className="absolute -right-5 top-8 h-[78%] w-[72%] rounded-[8px] border border-accent-2/50" aria-hidden />
-              <div className="relative overflow-hidden rounded-[8px] border border-accent-2/40 bg-primary shadow-soft">
+            <div className="relative mx-auto w-full max-w-[560px] px-3 sm:px-5">
+              <div className="absolute inset-x-0 bottom-8 top-8 rounded-[8px] bg-primary shadow-[0_28px_70px_rgba(10,22,40,0.22)]" aria-hidden />
+              <div className="absolute right-0 top-0 h-28 w-28 border-r border-t border-gold-500/70" aria-hidden />
+              <div className="absolute bottom-0 left-0 h-28 w-28 border-b border-l border-gold-500/70" aria-hidden />
+              <div className="relative overflow-hidden rounded-[8px] border border-gold-500/45 bg-primary p-2 shadow-soft">
                 <Image
                   src={lawyerProfile.portraitSrc}
                   alt={lawyerProfile.portraitAlt}
-                  width={400}
-                  height={400}
-                  loading="lazy"
+                  width={800}
+                  height={1000}
+                  priority
+                  quality={92}
                   placeholder="blur"
                   blurDataURL={portraitBlurDataUrl}
-                  sizes="(min-width: 1024px) 38vw, 88vw"
-                  className="aspect-square h-auto w-full object-cover object-center"
+                  sizes="(min-width: 1280px) 520px, (min-width: 1024px) 42vw, 92vw"
+                  className="aspect-[4/5] h-auto w-full rounded-[4px] object-cover object-center"
                 />
               </div>
-              <div className="absolute -bottom-5 right-5 border border-accent-2/50 bg-background px-5 py-4 shadow-gold">
-                <p className="font-serif text-2xl font-bold text-accent-1">10+</p>
-                <p className="text-sm text-muted">yıllık mesleki deneyim</p>
+              <div className="absolute bottom-6 right-0 max-w-[180px] border border-gold-500/55 bg-cream-50 px-5 py-4 shadow-gold sm:right-2">
+                <p className="font-serif text-3xl font-bold text-primary">10+</p>
+                <p className="text-sm font-medium text-muted">yıllık mesleki deneyim</p>
               </div>
             </div>
           </Reveal>
@@ -152,7 +149,7 @@ export default function HomePage() {
             <SectionIntro
               eyebrow="Hizmet alanları"
               title="Hukuki ihtiyaçlara göre uzmanlık alanları"
-              description="Ceza, aile, iş, kira, tüketici ve ticaret hukuku gibi alanlarda süreci doğru değerlendirmeye yardımcı açıklamalar ve danışmanlık başlıkları."
+              description="Kira, iş, aile, ceza, ticaret ve gayrimenkul hukuku alanlarında süreci doğru değerlendirmeye yardımcı açıklamalar ve danışmanlık başlıkları."
             />
             <Link
               href="/uzmanlik-alanlari"
@@ -162,8 +159,8 @@ export default function HomePage() {
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {practiceAreas.slice(0, 4).map((area) => (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {practiceAreas.map((area) => (
               <Reveal key={area.slug}>
                 <div className="h-full rounded-[8px] border border-primary/10 bg-white p-6 shadow-soft transition hover:border-accent-1/30">
                   <area.icon className="mb-5 h-7 w-7 text-accent-1" aria-hidden />

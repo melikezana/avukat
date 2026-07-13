@@ -29,16 +29,32 @@ export function Header() {
     return () => window.removeEventListener("scroll", updateScrolled);
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
+
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 border-b bg-background/90 backdrop-blur-xl transition-shadow duration-300",
-        scrolled ? "border-primary/10 shadow-[0_12px_34px_rgba(10,22,40,0.08)]" : "border-primary/5"
+        "sticky top-0 z-50 border-b bg-cream-50/95 backdrop-blur-xl transition-shadow duration-300",
+        scrolled ? "border-gold-500/25 shadow-[0_12px_34px_rgba(10,22,40,0.08)]" : "border-primary/5"
       )}
     >
-      <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
-          <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-accent-2/50 bg-primary">
+      <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between gap-5 px-5 sm:px-6 lg:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-3" onClick={() => setOpen(false)}>
+          <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gold-500/60 bg-primary">
             <Image
               src={lawyerProfile.portraitSrc}
               alt={lawyerProfile.portraitAlt}
@@ -49,47 +65,54 @@ export function Header() {
               blurDataURL={portraitBlurDataUrl}
               className="h-full w-full object-cover"
             />
-            <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-1 text-white ring-2 ring-background">
+            <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gold-500 text-primary ring-2 ring-cream-50">
               <Scale className="h-3 w-3" aria-hidden />
             </span>
           </span>
-          <span>
+          <span className="min-w-0">
             <span className="block font-serif text-xl font-bold leading-none text-primary">{lawyerProfile.name}</span>
             <span className="mt-1 block text-xs text-muted">{lawyerProfile.shortTitle}</span>
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex" aria-label="Ana menü">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "relative text-sm font-medium text-muted transition hover:text-accent-1",
-                  isActive &&
-                    "text-accent-1 after:absolute after:-bottom-2 after:left-0 after:h-px after:w-full after:bg-accent-1"
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav
+          className="hidden rounded-[8px] border border-primary/10 bg-white/70 px-2 py-1.5 shadow-[0_10px_28px_rgba(10,22,40,0.04)] xl:block"
+          aria-label="Ana menü"
+        >
+          <ul className="flex items-center justify-center gap-2">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              return (
+                <li key={item.href} className="list-none">
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "relative inline-flex min-h-10 items-center whitespace-nowrap rounded-[6px] px-4 text-sm font-semibold text-muted transition hover:bg-cream-100/70 hover:text-primary",
+                      isActive &&
+                        "bg-primary text-white shadow-[0_10px_22px_rgba(10,22,40,0.12)] hover:bg-primary hover:text-white after:absolute after:-bottom-2 after:left-4 after:right-4 after:h-px after:bg-gold-500"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
         <Link
           href="/iletisim"
-          className="hidden rounded-[6px] bg-accent-1 px-4 py-2.5 text-sm font-semibold text-white transition duration-300 hover:bg-accent-2 hover:text-primary lg:inline-flex"
+          className="hidden shrink-0 rounded-[6px] bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-gold transition duration-300 hover:bg-gold-500 hover:text-primary xl:inline-flex"
         >
           İletişime Geç
         </Link>
 
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-primary/10 text-primary transition hover:border-accent-1 hover:text-accent-1 lg:hidden"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] border border-primary/10 text-primary transition hover:border-gold-500 hover:text-primary xl:hidden"
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
+          aria-controls="mobile-navigation"
           aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
         >
           {open ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
@@ -97,18 +120,30 @@ export function Header() {
       </div>
 
       {open ? (
-        <div className="border-t border-primary/10 bg-background px-5 py-4 shadow-[0_18px_36px_rgba(10,22,40,0.08)] lg:hidden">
-          <nav className="mx-auto flex max-w-7xl flex-col gap-1" aria-label="Mobil menü">
-            {navigation.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-[6px] px-3 py-3 text-sm font-semibold text-primary transition hover:bg-white hover:text-accent-1"
-                onClick={() => setOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
+        <div
+          id="mobile-navigation"
+          className="border-t border-gold-500/20 bg-cream-50 px-5 py-4 shadow-[0_18px_36px_rgba(10,22,40,0.08)] xl:hidden"
+        >
+          <nav aria-label="Mobil menü">
+            <ul className="mx-auto flex max-w-7xl flex-col gap-2">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+                return (
+                  <li key={item.href} className="list-none">
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "block rounded-[6px] border border-primary/10 bg-white/70 px-3 py-3 text-sm font-semibold text-primary transition hover:border-gold-500/50 hover:bg-white",
+                        isActive && "border-gold-500/50 bg-primary text-white hover:bg-primary hover:text-white"
+                      )}
+                      onClick={() => setOpen(false)}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </nav>
         </div>
       ) : null}

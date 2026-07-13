@@ -1,8 +1,7 @@
-"use client";
-
 import Image from "next/image";
 import {
   BriefcaseBusiness,
+  Building2,
   HeartHandshake,
   Home,
   Landmark,
@@ -10,7 +9,6 @@ import {
   ShieldCheck,
   type LucideIcon
 } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 type ArticleCoverProps = {
@@ -22,7 +20,6 @@ type ArticleCoverProps = {
   sizes: string;
   className?: string;
   imageClassName?: string;
-  priority?: boolean;
 };
 
 type CoverStyle = {
@@ -36,16 +33,16 @@ const coverStyles: { keywords: string[]; style: CoverStyle }[] = [
     keywords: ["Kira", "Gayrimenkul"],
     style: {
       icon: Home,
-      gradient: "from-[#7A1F2B] via-[#0A1628] to-[#B8965A]",
-      ring: "border-[#B8965A]/45 bg-[#FAF7F1]/10"
+      gradient: "from-[#7A1F2B] via-[#0A1628] to-[#8B6A2F]",
+      ring: "border-[#CFAE77]/45 bg-[#FAF7F1]/10"
     }
   },
   {
     keywords: ["İş", "Is"],
     style: {
       icon: BriefcaseBusiness,
-      gradient: "from-[#0A1628] via-[#7A1F2B] to-[#B8965A]",
-      ring: "border-[#FAF7F1]/30 bg-[#B8965A]/10"
+      gradient: "from-[#0A1628] via-[#7A1F2B] to-[#8B6A2F]",
+      ring: "border-[#FAF7F1]/30 bg-[#CFAE77]/10"
     }
   },
   {
@@ -53,7 +50,7 @@ const coverStyles: { keywords: string[]; style: CoverStyle }[] = [
     style: {
       icon: HeartHandshake,
       gradient: "from-[#7A1F2B] via-[#5C5854] to-[#0A1628]",
-      ring: "border-[#B8965A]/45 bg-[#FAF7F1]/10"
+      ring: "border-[#CFAE77]/45 bg-[#FAF7F1]/10"
     }
   },
   {
@@ -61,14 +58,22 @@ const coverStyles: { keywords: string[]; style: CoverStyle }[] = [
     style: {
       icon: ShieldCheck,
       gradient: "from-[#0A1628] via-[#5C5854] to-[#7A1F2B]",
-      ring: "border-[#B8965A]/40 bg-[#FAF7F1]/10"
+      ring: "border-[#CFAE77]/40 bg-[#FAF7F1]/10"
+    }
+  },
+  {
+    keywords: ["Ticaret", "Şirket", "Sirket"],
+    style: {
+      icon: Building2,
+      gradient: "from-[#07111F] via-[#7A1F2B] to-[#8B6A2F]",
+      ring: "border-[#CFAE77]/40 bg-[#FAF7F1]/10"
     }
   },
   {
     keywords: ["Genel"],
     style: {
       icon: Scale,
-      gradient: "from-[#FAF7F1] via-[#B8965A] to-[#7A1F2B]",
+      gradient: "from-[#FAF7F1] via-[#8B6A2F] to-[#0A1628]",
       ring: "border-[#0A1628]/20 bg-white/20"
     }
   }
@@ -76,8 +81,8 @@ const coverStyles: { keywords: string[]; style: CoverStyle }[] = [
 
 const defaultCoverStyle: CoverStyle = {
   icon: Landmark,
-  gradient: "from-[#0A1628] via-[#7A1F2B] to-[#B8965A]",
-  ring: "border-[#B8965A]/40 bg-[#FAF7F1]/10"
+  gradient: "from-[#0A1628] via-[#7A1F2B] to-[#8B6A2F]",
+  ring: "border-[#CFAE77]/40 bg-[#FAF7F1]/10"
 };
 
 function getCoverStyle(category: string) {
@@ -95,15 +100,13 @@ export function ArticleCover({
   height = 450,
   sizes,
   className,
-  imageClassName,
-  priority = false
+  imageClassName
 }: ArticleCoverProps) {
-  const [imageFailed, setImageFailed] = useState(false);
   const coverStyle = getCoverStyle(category);
   const Icon = coverStyle.icon;
   const baseClassName = cn("aspect-[16/9] w-full", className);
 
-  if (src && !imageFailed) {
+  if (src) {
     return (
       <Image
         src={src}
@@ -111,8 +114,6 @@ export function ArticleCover({
         width={width}
         height={height}
         sizes={sizes}
-        priority={priority}
-        onError={() => setImageFailed(true)}
         className={cn(baseClassName, "object-cover", imageClassName)}
       />
     );
@@ -138,7 +139,7 @@ export function ArticleCover({
         >
           <Icon className="h-9 w-9 text-[#FAF7F1]" strokeWidth={1.5} aria-hidden />
         </span>
-        <span className="border-t border-[#B8965A]/50 pt-3 text-sm font-semibold text-[#FAF7F1]">
+        <span className="border-t border-[#CFAE77]/50 pt-3 text-sm font-semibold text-[#FAF7F1]">
           {category}
         </span>
       </div>

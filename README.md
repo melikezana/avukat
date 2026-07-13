@@ -52,7 +52,7 @@ Ana renk tokenları `tailwind.config.ts` içinde tanımlıdır:
 - Background / krem: `background` - `#FAF7F1`
 - Primary / navy-black: `primary` - `#0A1628`
 - Accent 1 / bordo marka rengi: `accent-1` - `#7A1F2B`
-- Accent 2 / kırık altın: `accent-2` - `#B8965A`
+- Accent 2 / koyu kırık altın: `accent-2` - `#8B6A2F`
 - Text muted: `text-muted` ve `muted` - `#5C5854`
 
 Bordo renk CTA butonları, aktif menü bağlantıları, alıntı kutuları, ayraç çizgileri ve ikon vurgularında kullanılır. Kırık altın daha çok ince border, küçük ikon detayı ve hover vurgusu için ayrılmıştır.
@@ -65,27 +65,69 @@ Güncel portre kare kadrajlıdır. Büyük görsel alanları ve küçük avatarl
 
 ## Fontlar
 
-Font aileleri `app/globals.css` içinde tanımlıdır:
+Font aileleri `app/layout.tsx` içinde `next/font/google` ile yüklenir. `display: "swap"` ve `latin-ext` alt kümesi kullanılır; font değişkenleri layout üzerinden `--font-display` ve `--font-body` olarak atanır.
 
-```css
---font-display: "Playfair Display", "Fraunces", Georgia, serif;
---font-body: "Inter", "Manrope", "Segoe UI", Arial, sans-serif;
-```
+`app/globals.css` içinde aynı değişkenler için sistem fallback değerleri tutulur. Böylece font yüklenmesi gecikirse layout shift oluşmadan okunabilir fallback devreye girer.
 
-Başlık fontu için `--font-display`, gövde metni için `--font-body` değerini düzenleyebilirsiniz.
+Başlık fontu için `Playfair Display`, gövde metni için `Inter` kullanılır.
 
 ## İletişim Formu
 
-Form `app/api/contact/route.ts` API route'una gönderim yapar. Resend API anahtarı yoksa yerel geliştirmede önizleme modunda çalışır ve mesajı konsola yazar.
+Form `app/api/contact/route.ts` API route'una gönderim yapar. Resend API anahtarı yoksa yerel geliştirmede önizleme modunda başarılı yanıt döner; gerçek e-posta gönderimi için Resend değişkenleri ayarlanmalıdır.
 
 Gerçek e-posta gönderimi için `.env.local` dosyasına şu alanları ekleyin:
 
 ```bash
 RESEND_API_KEY="re_xxxxxxxxx"
-CONTACT_TO_EMAIL="Av.idrisdagkesen@gmail.com"
+CONTACT_EMAIL="Av.idrisdagkesen@gmail.com"
 CONTACT_FROM_EMAIL="Av.idrisdagkesen@gmail.com"
 NEXT_PUBLIC_SITE_URL="https://www.idrisdagkesen.av.tr"
 ```
+
+Örnek ortam değişkenleri için `.env.example` dosyasını kullanın. Gerçek API anahtarı, oturum sırrı veya şifre hash'i bu dosyaya ya da GitHub'a eklenmemelidir.
+
+## Analytics
+
+Sayfa görüntüleme takibi için Vercel Analytics kullanılır. `app/layout.tsx` içinde `@vercel/analytics/next` bileşeni yer alır. Bu kurulum kişisel veri, reklam çerezi veya pazarlama profili toplamaz; amaç hangi sayfa ve makalelerin daha çok okunduğunu genel düzeyde görmektir.
+
+Vercel üzerinde ek bir ortam değişkeni gerekmez. Site Vercel'e deploy edildiğinde Analytics panelinden proje bazında etkinleştirilebilir.
+
+## Vercel Ortam Değişkenleri
+
+Vercel panelinde proje ayarlarından `Settings > Environment Variables` bölümüne aşağıdaki değerleri ekleyin:
+
+| Değişken | Zorunluluk | Açıklama |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Zorunlu | Üretim alan adı. Örnek: `https://www.idrisdagkesen.av.tr` |
+| `RESEND_API_KEY` | Gerçek mail için zorunlu | İletişim formunun e-posta göndermesi için Resend API anahtarı. |
+| `CONTACT_EMAIL` | Önerilir | Form mesajlarının gideceği adres. |
+| `CONTACT_FROM_EMAIL` | Önerilir | Resend'de doğrulanmış gönderici adresi. Yazılmazsa `CONTACT_EMAIL` kullanılır. |
+| `ADMIN_PASSWORD_HASH` | Admin modülü varsa zorunlu | Bu kod tabanında şu an admin paneli yoktur; eklendiğinde düz şifre yerine hash saklanmalıdır. |
+| `SESSION_SECRET` | Admin modülü varsa zorunlu | Admin oturumu imzalamak için uzun ve rastgele gizli değer. |
+
+Değerleri Production, Preview ve Development ortamları için ayrı ayrı tanımlayabilirsiniz. Gizli değerleri kod deposuna eklemeyin.
+
+## Vercel'e Deploy Adımları
+
+1. GitHub deposunu Vercel'e bağlayın.
+2. Framework olarak Next.js seçili olduğundan emin olun.
+3. Build komutu `npm run build`, install komutu `npm install` olarak kalabilir.
+4. `Settings > Environment Variables` bölümüne yukarıdaki değişkenleri ekleyin.
+5. İlk deploy tamamlandıktan sonra Vercel'in verdiği geçici URL üzerinden siteyi kontrol edin.
+6. Gerçek domain bağlandıktan sonra `NEXT_PUBLIC_SITE_URL` değerini canlı domain ile güncelleyin ve yeniden deploy alın.
+
+Deploy öncesinde yerelde `npm run lint` ve `npm run build` komutlarının hatasız geçtiğini doğrulayın.
+
+## Custom Domain Bağlama
+
+1. Vercel'de projeyi açın ve `Settings > Domains` bölümüne girin.
+2. Kullanmak istediğiniz alan adını ekleyin: örnek `www.idrisdagkesen.av.tr`.
+3. Vercel'in verdiği DNS kaydını alan adı sağlayıcınızın paneline girin. Genellikle `www` için `CNAME` kaydı kullanılır.
+4. Kök alan adı da kullanılacaksa Vercel'in gösterdiği `A` veya `CNAME` yönlendirmesini ayrıca ekleyin.
+5. DNS yayılımı tamamlandıktan sonra Vercel otomatik SSL sertifikasını üretir.
+6. Domain aktif olunca `NEXT_PUBLIC_SITE_URL` değerini canlı domain ile aynı olacak şekilde güncelleyin ve yeniden deploy alın.
+
+DNS değişiklikleri bazı sağlayıcılarda birkaç dakika, bazılarında birkaç saat sürebilir.
 
 ## İletişim Bilgileri
 

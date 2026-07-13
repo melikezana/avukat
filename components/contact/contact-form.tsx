@@ -41,43 +41,57 @@ export function ContactForm() {
   return (
     <form onSubmit={handleSubmit} className="rounded-[8px] border border-primary/10 bg-background p-6 shadow-soft md:p-8">
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-sm font-semibold text-primary">Ad Soyad</span>
+        <div>
+          <label htmlFor="contact-name" className="text-sm font-semibold text-primary">
+            Ad Soyad
+          </label>
           <input
+            id="contact-name"
             required
             name="name"
             type="text"
-            className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm outline-none transition focus:border-accent-1"
+            autoComplete="name"
+            className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
           />
-        </label>
-        <label className="block">
-          <span className="text-sm font-semibold text-primary">E-posta</span>
+        </div>
+        <div>
+          <label htmlFor="contact-email" className="text-sm font-semibold text-primary">
+            E-posta
+          </label>
           <input
+            id="contact-email"
             required
             name="email"
             type="email"
-            className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm outline-none transition focus:border-accent-1"
+            autoComplete="email"
+            className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
           />
-        </label>
+        </div>
       </div>
-      <label className="mt-5 block">
-        <span className="text-sm font-semibold text-primary">Konu</span>
+      <div className="mt-5">
+        <label htmlFor="contact-subject" className="text-sm font-semibold text-primary">
+          Konu
+        </label>
         <input
+          id="contact-subject"
           required
           name="subject"
           type="text"
-          className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm outline-none transition focus:border-accent-1"
+          className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
         />
-      </label>
-      <label className="mt-5 block">
-        <span className="text-sm font-semibold text-primary">Mesaj</span>
+      </div>
+      <div className="mt-5">
+        <label htmlFor="contact-message" className="text-sm font-semibold text-primary">
+          Mesaj
+        </label>
         <textarea
+          id="contact-message"
           required
           name="message"
           rows={7}
-          className="mt-2 w-full resize-y rounded-[6px] border border-primary/10 bg-white px-4 py-3 text-sm leading-7 outline-none transition focus:border-accent-1"
+          className="mt-2 w-full resize-y rounded-[6px] border border-primary/10 bg-white px-4 py-3 text-sm leading-7 transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
         />
-      </label>
+      </div>
 
       <button
         type="submit"

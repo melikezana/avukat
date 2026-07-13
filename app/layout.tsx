@@ -1,7 +1,26 @@
+import "./globals.css";
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { Inter, Playfair_Display } from "next/font/google";
 import { Footer } from "@/components/site/footer";
 import { Header } from "@/components/site/header";
-import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const bodyFont = Inter({
+  subsets: ["latin-ext"],
+  display: "swap",
+  variable: "--font-body",
+  fallback: ["Segoe UI", "Arial", "sans-serif"],
+  adjustFontFallback: true
+});
+
+const displayFont = Playfair_Display({
+  subsets: ["latin-ext"],
+  display: "swap",
+  variable: "--font-display",
+  fallback: ["Georgia", "serif"],
+  adjustFontFallback: true
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.idrisdagkesen.av.tr"),
@@ -30,10 +49,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
-      <body>
+      <body className={cn(bodyFont.variable, displayFont.variable, "bg-background text-primary antialiased")}>
         <Header />
         <main>{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );

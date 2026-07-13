@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock } from "lucide-react";
 import { ArticleCover } from "@/components/articles/article-cover";

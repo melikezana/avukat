@@ -89,7 +89,7 @@ export default function ContactPage() {
             </Link>
 
             <div className="overflow-hidden rounded-[8px] border border-primary/10 bg-background">
-              <div className="flex aspect-[16/10] items-center justify-center bg-[linear-gradient(135deg,#FAF7F1_0%,#EFE6D8_45%,#7A1F2B_45%,#0A1628_100%)] p-8 text-center">
+              <div className="flex aspect-[16/10] items-center justify-center bg-[linear-gradient(135deg,#FAF7F1_0%,#EFE6D8_45%,#8B6A2F_45%,#0A1628_100%)] p-8 text-center">
                 <div className="max-w-xs bg-white/90 p-5 shadow-soft">
                   <p className="font-serif text-2xl font-bold text-primary">Görüşme bilgisi</p>
                   <p className="mt-2 text-sm leading-6 text-muted">

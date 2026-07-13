@@ -30,17 +30,20 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
   return (
     <div>
       <div className="mb-8 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-        <label className="relative block">
-          <span className="sr-only">Makalelerde ara</span>
+        <div className="relative">
+          <label htmlFor="article-search" className="sr-only">
+            Makalelerde ara
+          </label>
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-accent-1" aria-hidden />
           <input
+            id="article-search"
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Başlık, konu veya kategori ara"
-            className="h-12 w-full rounded-[6px] border border-primary/10 bg-background pl-12 pr-4 text-sm outline-none transition placeholder:text-muted/60 focus:border-accent-1 focus:bg-white"
+            className="h-12 w-full rounded-[6px] border border-primary/10 bg-background pl-12 pr-4 text-sm transition placeholder:text-muted/60 focus:border-accent-1 focus:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
           />
-        </label>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           {["Tümü", ...categories].map((item) => (
