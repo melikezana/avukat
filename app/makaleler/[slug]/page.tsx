@@ -108,7 +108,7 @@ export default function ArticlePage({ params }: ArticlePageProps) {
 
       <section className="bg-white py-14 md:py-20">
         <Container className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_260px]">
-          <div className="article-prose mx-auto w-full max-w-3xl">
+          <div lang="tr" className="article-prose prose mx-auto w-full max-w-3xl">
             <MDXRemote
               source={article.content}
               components={mdxComponents}

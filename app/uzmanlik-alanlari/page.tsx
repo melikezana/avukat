@@ -3,7 +3,9 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { Reveal } from "@/components/motion/reveal";
+import { CategoryVisual } from "@/components/site/CategoryVisual";
 import { PageHeader } from "@/components/ui/page-header";
+import { getCategoryFilterHref } from "@/lib/categories";
 import { practiceAreas } from "@/lib/data/practice-areas";
 
 export const metadata: Metadata = {
@@ -26,12 +28,24 @@ export default function PracticeAreasPage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {practiceAreas.map((area) => (
               <Reveal key={area.slug}>
-                <article className="flex h-full flex-col rounded-[8px] border border-primary/10 bg-background p-6 shadow-soft transition duration-300 hover:-translate-y-1 hover:border-accent-1/40">
-                  <area.icon className="h-8 w-8 text-accent-1" aria-hidden />
-                  <h2 className="mt-6 font-serif text-2xl font-bold text-primary">{area.title}</h2>
-                  <p className="mt-3 flex-1 leading-7 text-muted">{area.summary}</p>
-                  <p className="mt-5 border-l-2 border-accent-1 pl-3 text-sm font-semibold text-primary">{area.note}</p>
-                </article>
+                <Link href={getCategoryFilterHref(area.title)} className="group block h-full focus-visible:outline-none">
+                  <article className="flex h-full flex-col overflow-hidden rounded-[8px] border border-primary/10 bg-background shadow-soft transition duration-300 group-hover:-translate-y-1 group-hover:border-accent-1/40 group-hover:shadow-[0_22px_64px_rgba(10,22,40,0.12)] group-focus-visible:-translate-y-1 group-focus-visible:border-accent-1/50">
+                    <CategoryVisual category={area.title} title={area.title} className="rounded-none" />
+                    <div className="flex flex-1 flex-col p-6">
+                      <h2 className="card-title font-serif text-2xl font-bold text-primary transition group-hover:text-accent-1">
+                        {area.title}
+                      </h2>
+                      <p className="mt-3 flex-1 leading-7 text-muted">{area.summary}</p>
+                      <p className="mt-5 border-l-2 border-accent-1 pl-3 text-sm font-semibold text-primary">
+                        {area.note}
+                      </p>
+                      <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-accent-1 transition group-hover:text-accent-2">
+                        İlgili yazıları gör
+                        <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden />
+                      </span>
+                    </div>
+                  </article>
+                </Link>
               </Reveal>
             ))}
           </div>

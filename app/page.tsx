@@ -4,8 +4,10 @@ import { ArrowRight, BookOpenText, GraduationCap, Scale, ShieldCheck } from "luc
 import { ArticleCard } from "@/components/articles/article-card";
 import { Container } from "@/components/layout/container";
 import { Reveal } from "@/components/motion/reveal";
+import { CategoryVisual } from "@/components/site/CategoryVisual";
 import { SectionIntro } from "@/components/ui/section-intro";
 import { getAllArticles } from "@/lib/articles";
+import { getCategoryFilterHref } from "@/lib/categories";
 import { practiceAreas } from "@/lib/data/practice-areas";
 import { lawyerProfile, portraitBlurDataUrl } from "@/lib/site-profile";
 
@@ -40,7 +42,7 @@ export default function HomePage() {
               <Scale className="h-4 w-4 text-gold-500" aria-hidden />
               {lawyerProfile.name}
             </p>
-            <h1 className="max-w-3xl font-serif text-5xl font-bold leading-[1.05] text-primary md:text-6xl">
+            <h1 className="max-w-3xl text-balance font-serif text-5xl font-bold leading-[1.05] text-primary md:text-6xl">
               Hukuki süreçleri anlaşılır ve güven veren bir dille açıklıyorum.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
@@ -162,11 +164,17 @@ export default function HomePage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {practiceAreas.map((area) => (
               <Reveal key={area.slug}>
-                <div className="h-full rounded-[8px] border border-primary/10 bg-white p-6 shadow-soft transition hover:border-accent-1/30">
-                  <area.icon className="mb-5 h-7 w-7 text-accent-1" aria-hidden />
-                  <h3 className="font-serif text-2xl font-bold text-primary">{area.title}</h3>
-                  <p className="mt-3 leading-7 text-muted">{area.summary}</p>
-                </div>
+                <Link href={getCategoryFilterHref(area.title)} className="group block h-full focus-visible:outline-none">
+                  <article className="h-full overflow-hidden rounded-[8px] border border-primary/10 bg-white shadow-soft transition duration-300 group-hover:-translate-y-1 group-hover:border-accent-1/40 group-hover:shadow-[0_22px_64px_rgba(10,22,40,0.12)]">
+                    <CategoryVisual category={area.title} title={area.title} className="rounded-none" />
+                    <div className="p-6">
+                      <h3 className="card-title font-serif text-2xl font-bold text-primary transition group-hover:text-accent-1">
+                        {area.title}
+                      </h3>
+                      <p className="mt-3 leading-7 text-muted">{area.summary}</p>
+                    </div>
+                  </article>
+                </Link>
               </Reveal>
             ))}
           </div>

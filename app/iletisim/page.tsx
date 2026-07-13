@@ -4,7 +4,7 @@ import { Instagram, Mail, MapPin, MessageCircle, Phone, Twitter } from "lucide-r
 import { ContactForm } from "@/components/contact/contact-form";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/ui/page-header";
-import { contactInfo, socialLinks } from "@/lib/site-profile";
+import { contactInfo, socialLinks } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "İletişim",
@@ -69,7 +69,7 @@ export default function ContactPage() {
                       href={link.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-[6px] border border-primary/10 bg-white px-3 py-2 text-sm font-semibold text-primary transition hover:border-accent-2 hover:text-accent-1"
+                      className="inline-flex items-center gap-2 rounded-[6px] border border-primary/10 bg-white px-3 py-2 text-sm font-semibold text-primary transition hover:border-[#B8965A] hover:text-[#B8965A] hover:underline hover:underline-offset-4"
                     >
                       <Icon className="h-4 w-4" aria-hidden />
                       {link.handle}

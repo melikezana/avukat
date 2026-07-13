@@ -43,7 +43,14 @@ type ArticleRecord = Article & {
 };
 
 const defaultAuthor = "Av. İdris Dağkesen";
-const priorityFilterCategories = ["Kira Hukuku", "İş Hukuku", "Aile Hukuku", "Ceza Hukuku", "Ticaret Hukuku"];
+const priorityFilterCategories = [
+  "Kira Hukuku",
+  "İş Hukuku",
+  "Aile Hukuku",
+  "Ceza Hukuku",
+  "Ticaret Hukuku",
+  "Gayrimenkul Hukuku"
+];
 
 function estimateReadingTime(content: string) {
   return Math.max(1, Math.ceil(readingTime(content).minutes));

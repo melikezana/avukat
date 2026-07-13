@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Instagram, Mail, Phone, Scale, Twitter } from "lucide-react";
 import { Container } from "@/components/layout/container";
-import { contactInfo, lawyerProfile, portraitBlurDataUrl, socialLinks } from "@/lib/site-profile";
+import { contactInfo, lawyerProfile, portraitBlurDataUrl, socialLinks } from "@/lib/config";
 
 const footerLinks = [
   { href: "/hakkimda", label: "Hakkımda" },
@@ -41,7 +41,7 @@ export function Footer() {
             Bu sitedeki yazılar genel bilgilendirme içindir. Kendi durumunuzla ilgili net yol haritası
             için hukuki danışmanlık almanız önerilir.
           </p>
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex flex-col gap-2">
             {socialLinks.map((link) => {
               const Icon = link.label === "Instagram" ? Instagram : Twitter;
 
@@ -51,10 +51,11 @@ export function Footer() {
                   href={link.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-[6px] border border-white/10 text-white/70 transition hover:border-accent-2 hover:text-accent-2"
+                  className="inline-flex w-fit items-center gap-2 rounded-[6px] border border-white/10 px-3 py-2 text-sm font-semibold text-white/70 transition hover:border-[#B8965A] hover:text-[#B8965A] hover:underline hover:underline-offset-4"
                   aria-label={`${link.label} profilini aç`}
                 >
                   <Icon className="h-4 w-4" aria-hidden />
+                  <span>{link.handle}</span>
                 </a>
               );
             })}

@@ -2,8 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Inter, Playfair_Display } from "next/font/google";
-import { Footer } from "@/components/site/footer";
-import { Header } from "@/components/site/header";
+import { SiteShell } from "@/components/site/site-shell";
 import { cn } from "@/lib/utils";
 
 const bodyFont = Inter({
@@ -50,9 +49,7 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className={cn(bodyFont.variable, displayFont.variable, "bg-background text-primary antialiased")}>
-        <Header />
-        <main>{children}</main>
-        <Footer />
+        <SiteShell>{children}</SiteShell>
         <Analytics />
       </body>
     </html>

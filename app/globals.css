@@ -35,6 +35,34 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body,
+p,
+h3,
+h4,
+.prose,
+.article-prose,
+.article-prose li {
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+.card-title,
+button,
+[role="button"],
+.text-balance {
+  hyphens: none;
+  -webkit-hyphens: none;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: balance;
+}
+
 ::selection {
   background: rgba(184, 150, 90, 0.28);
 }

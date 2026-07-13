@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ArticleFilters } from "@/components/articles/article-filters";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/ui/page-header";
@@ -23,7 +24,9 @@ export default function ArticlesPage() {
       />
       <section className="bg-white py-16 md:py-20">
         <Container>
-          <ArticleFilters articles={articles} categories={categories} />
+          <Suspense fallback={<div className="h-64 rounded-[8px] border border-primary/10 bg-background" />}>
+            <ArticleFilters articles={articles} categories={categories} />
+          </Suspense>
         </Container>
       </section>
     </>
