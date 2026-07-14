@@ -28,19 +28,22 @@ export function ContactForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const form = event.currentTarget;
+
     setState("loading");
     setFeedback("");
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
 
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       const data = (await response.json()) as ContactResponse;
@@ -51,20 +54,34 @@ export function ContactForm() {
         return;
       }
 
-      event.currentTarget.reset();
+      form.reset();
+
       setState("success");
-      setFeedback(data.message ?? "Mesajınız alındı. En kısa sürede dönüş yapılacaktır.");
-    } catch {
+      setFeedback(
+        data.message ?? "Mesajınız başarıyla gönderildi. En kısa sürede sizinle iletişime geçilecektir."
+      );
+    } catch (error) {
+      console.error(error);
+
       setState("error");
       setFeedback("Mesaj gönderilemedi. Lütfen bağlantınızı kontrol edip tekrar deneyin.");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-[8px] border border-primary/10 bg-background p-6 shadow-soft md:p-8">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-[8px] border border-primary/10 bg-background p-6 shadow-soft md:p-8"
+    >
       <div className="hidden" aria-hidden="true">
         <label htmlFor="contact-company">Şirket</label>
-        <input id="contact-company" name="company" type="text" tabIndex={-1} autoComplete="off" />
+        <input
+          id="contact-company"
+          name="company"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+        />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -81,6 +98,7 @@ export function ContactForm() {
             className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
           />
         </div>
+
         <div>
           <label htmlFor="contact-email" className="text-sm font-semibold text-primary">
             E-posta
@@ -95,6 +113,7 @@ export function ContactForm() {
           />
         </div>
       </div>
+
       <div className="mt-5">
         <label htmlFor="contact-subject" className="text-sm font-semibold text-primary">
           Konu
@@ -107,6 +126,7 @@ export function ContactForm() {
           className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
         />
       </div>
+
       <div className="mt-5">
         <label htmlFor="contact-message" className="text-sm font-semibold text-primary">
           Mesaj
@@ -126,17 +146,26 @@ export function ContactForm() {
         className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-[6px] bg-accent-1 px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-accent-2 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
         <Send className="h-4 w-4" aria-hidden />
-        {state === "loading" ? "Gönderiliyor" : "Mesajı Gönder"}
+        {state === "loading" ? "Gönderiliyor..." : "Mesaj Gönder"}
       </button>
 
-      {feedback ? (
-        <p className={`mt-4 text-sm font-medium ${state === "error" ? "text-red-700" : "text-primary"}`}>
+      {feedback && (
+        <p
+          className={`mt-4 text-sm font-medium ${
+            state === "success"
+              ? "text-green-700"
+              : state === "error"
+              ? "text-red-700"
+              : "text-primary"
+          }`}
+        >
           {feedback}
         </p>
-      ) : null}
+      )}
 
       <p className="mt-4 text-xs leading-6 text-muted">
-        Bu form üzerinden paylaştığınız kişisel veriler yalnızca talebinizi değerlendirmek ve sizinle iletişime geçmek amacıyla işlenir.
+        Bu form üzerinden paylaştığınız kişisel veriler yalnızca talebinizi
+        değerlendirmek ve sizinle iletişime geçmek amacıyla işlenir.
       </p>
     </form>
   );
