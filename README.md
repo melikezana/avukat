@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Av. İdris Dağkesen Web Sitesi
 
 Next.js 14 App Router, TypeScript, TailwindCSS ve MDX tabanlı avukat web sitesi. Site; dijital kartvizit, uzmanlık alanları vitrini ve anlaşılır hukuk yazıları platformu olarak tasarlandı.
@@ -11,6 +10,19 @@ npm run dev
 ```
 
 Geliştirme sunucusu varsayılan olarak `http://localhost:3000` adresinde açılır.
+
+## Supabase Kurulumu
+
+Supabase bağlantısı `lib/supabase/client.ts` ve `lib/supabase/server.ts` yardımcıları üzerinden kurulur. Browser ve server client'ları aynı public proje URL'i ve publishable key değerini kullanır.
+
+Yerel geliştirme için `.env.local` dosyasına şu alanları ekleyin:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL="https://your-project-ref.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sb_publishable_xxxxxxxxxxxxxxxxxxxxx"
+```
+
+Bu değerler eksikse Supabase client oluşturulurken hangi environment variable'ın eksik olduğunu belirten açıklayıcı bir hata üretilir. Örnek değerler için `.env.example` dosyasını kullanın; gerçek anahtarları GitHub'a eklemeyin.
 
 ## Üretim build
 
@@ -100,6 +112,8 @@ Vercel panelinde proje ayarlarından `Settings > Environment Variables` bölüm�
 | Değişken | Zorunluluk | Açıklama |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Zorunlu | Üretim alan adı. Örnek: `https://www.idrisdagkesen.av.tr` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase kullanımı için zorunlu | Supabase proje URL'i. Örnek: `https://your-project-ref.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase kullanımı için zorunlu | Supabase publishable key değeri. |
 | `RESEND_API_KEY` | Gerçek mail için zorunlu | İletişim formunun e-posta göndermesi için Resend API anahtarı. |
 | `CONTACT_EMAIL` | Önerilir | Form mesajlarının gideceği adres. |
 | `CONTACT_FROM_EMAIL` | Önerilir | Resend'de doğrulanmış gönderici adresi. Yazılmazsa `CONTACT_EMAIL` kullanılır. |
@@ -146,6 +160,3 @@ Sitede görünen telefon, e-posta, WhatsApp ve sosyal medya bağlantıları `lib
 - `app/sitemap.ts` ile `/sitemap.xml` oluşturulur.
 - `app/robots.ts` ile `/robots.txt` oluşturulur.
 - Site URL'i için `NEXT_PUBLIC_SITE_URL` değişkenini ayarlayın.
-=======
-# avukat
->>>>>>> ff695a55e49d21913d8ab3705ee4b43c1e462568
