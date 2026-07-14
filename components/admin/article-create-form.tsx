@@ -10,6 +10,7 @@ import {
   type ArticleFormState
 } from "@/app/admin/makaleler/actions";
 import { ArticleCoverUpload } from "@/components/admin/article-cover-upload";
+import { ARTICLE_CATEGORY_OPTIONS, normalizeArticleCategory } from "@/lib/article-categories";
 import { slugifyTurkish } from "@/lib/categories";
 
 const emptyFields: ArticleFormFields = {
@@ -82,7 +83,8 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
       message: "",
       fields: {
         ...emptyFields,
-        ...initialFields
+        ...initialFields,
+        category: normalizeArticleCategory(initialFields?.category ?? emptyFields.category)
       }
     }),
     [initialFields]
@@ -174,16 +176,24 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
           <label htmlFor="article-category" className={labelClassName}>
             Kategori
           </label>
-          <input
+          <select
             id="article-category"
             name="category"
-            type="text"
             required
             defaultValue={state.fields?.category ?? ""}
             aria-invalid={Boolean(categoryError)}
             aria-describedby={categoryError ? "article-category-error" : undefined}
             className={inputClassName}
-          />
+          >
+            <option value="" disabled>
+              Kategori seçin
+            </option>
+            {ARTICLE_CATEGORY_OPTIONS.map((category) => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
+            ))}
+          </select>
           <FieldError id="article-category-error" message={categoryError} />
         </div>
 

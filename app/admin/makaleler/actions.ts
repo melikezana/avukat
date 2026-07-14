@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { isArticleCategorySlug, type ArticleCategorySlug } from "@/lib/article-categories";
 import { slugifyTurkish } from "@/lib/categories";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -29,6 +30,21 @@ export type ArticleActionResult = {
   message: string;
 };
 
+type ArticleInsertPayload = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  category: ArticleCategorySlug;
+  cover_image_url: string | null;
+  status: ArticleStatus;
+  published_at: string | null;
+};
+
+type ArticleUpdatePayload = ArticleInsertPayload & {
+  updated_at: string;
+};
+
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const coverImagePattern = /^(https?:\/\/.+|\/images\/articles\/[a-z0-9/_-]+\.(svg|jpg|jpeg|png|webp))$/i;
 
@@ -37,7 +53,11 @@ const articleFormSchema = z.object({
   slug: z.string().trim().max(140, "Adres çok uzun.").optional(),
   excerpt: z.string().trim().max(420, "Özet çok uzun.").optional(),
   content: z.string().trim().min(30, "İçerik en az 30 karakter olmalıdır."),
-  category: z.string().trim().min(2, "Kategori zorunludur.").max(80, "Kategori çok uzun."),
+  category: z
+    .string()
+    .trim()
+    .refine(isArticleCategorySlug, "Kategori seçilmelidir.")
+    .transform((value) => value as ArticleCategorySlug),
   status: z.string().refine((value): value is ArticleStatus => value === "draft" || value === "published", {
     message: "Durum seçilmelidir."
   }),
@@ -71,6 +91,19 @@ function getFields(formData: FormData): ArticleFormFields {
 
 function getPublishedAt(status: ArticleStatus) {
   return status === "published" ? new Date().toISOString() : null;
+}
+
+function getCoverImageUrl(value?: string) {
+  return value?.trim() || null;
+}
+
+function getSupabaseErrorLog(error: { code?: string; message?: string; details?: string; hint?: string }) {
+  return {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint
+  };
 }
 
 async function getAuthenticatedSupabase() {
@@ -144,22 +177,21 @@ export async function createArticleAction(
     };
   }
 
-  const { error } = await supabase.from("articles").insert({
+  const insertPayload = {
     title: parsed.data.title,
     slug,
-    excerpt: parsed.data.excerpt || null,
+    excerpt: parsed.data.excerpt ?? "",
     content: parsed.data.content,
     category: parsed.data.category,
-    cover_image_url: parsed.data.cover_image_url || null,
+    cover_image_url: getCoverImageUrl(parsed.data.cover_image_url),
     status: parsed.data.status,
     published_at: getPublishedAt(parsed.data.status)
-  });
+  } satisfies ArticleInsertPayload;
+
+  const { error } = await supabase.from("articles").insert(insertPayload);
 
   if (error) {
-    console.error("[admin.articles.create]", {
-      code: error.code,
-      message: error.message
-    });
+    console.error("[admin.articles.create]", getSupabaseErrorLog(error));
 
     return {
       message: getWriteErrorMessage(error.code),
@@ -212,28 +244,27 @@ export async function updateArticleAction(
   }
 
   const now = new Date().toISOString();
+  const updatePayload = {
+    title: parsed.data.title,
+    slug,
+    excerpt: parsed.data.excerpt ?? "",
+    content: parsed.data.content,
+    category: parsed.data.category,
+    cover_image_url: getCoverImageUrl(parsed.data.cover_image_url),
+    status: parsed.data.status,
+    published_at: getPublishedAt(parsed.data.status),
+    updated_at: now
+  } satisfies ArticleUpdatePayload;
+
   const { error } = await supabase
     .from("articles")
-    .update({
-      title: parsed.data.title,
-      slug,
-      excerpt: parsed.data.excerpt || null,
-      content: parsed.data.content,
-      category: parsed.data.category,
-      cover_image_url: parsed.data.cover_image_url || null,
-      status: parsed.data.status,
-      published_at: getPublishedAt(parsed.data.status),
-      updated_at: now
-    })
+    .update(updatePayload)
     .eq("id", articleId)
     .select("id")
     .single();
 
   if (error) {
-    console.error("[admin.articles.update]", {
-      code: error.code,
-      message: error.message
-    });
+    console.error("[admin.articles.update]", getSupabaseErrorLog(error));
 
     return {
       message: getWriteErrorMessage(error.code),

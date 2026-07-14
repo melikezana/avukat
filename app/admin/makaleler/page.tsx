@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PencilLine } from "lucide-react";
 import { ArticleDeleteButton } from "@/components/admin/article-delete-button";
+import { getArticleCategoryLabel } from "@/lib/article-categories";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -145,7 +146,7 @@ export default async function AdminArticlesPage({ searchParams }: AdminArticlesP
 
       {searchParams?.created === "1" ? (
         <div className="mb-5 rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          Makale kaydedildi.
+          Makale başarıyla kaydedildi.
         </div>
       ) : searchParams?.updated === "1" ? (
         <div className="mb-5 rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
@@ -203,7 +204,9 @@ export default async function AdminArticlesPage({ searchParams }: AdminArticlesP
                       <td className="min-w-[260px] px-4 py-4 font-semibold text-[var(--color-navy)]">
                         {article.title || "Başlıksız makale"}
                       </td>
-                      <td className="min-w-[160px] px-4 py-4 text-[#5f5a52]">{article.category || "-"}</td>
+                      <td className="min-w-[160px] px-4 py-4 text-[#5f5a52]">
+                        {getArticleCategoryLabel(article.category) || "-"}
+                      </td>
                       <td className="min-w-[140px] px-4 py-4">
                         <span
                           className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${getStatusClass(article.status)}`}

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ArticleCreateForm } from "@/components/admin/article-create-form";
 import type { ArticleFormFields, ArticleStatus } from "@/app/admin/makaleler/actions";
+import { normalizeArticleCategory } from "@/lib/article-categories";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -39,7 +40,7 @@ function toFormFields(article: ArticleRow): ArticleFormFields {
     slug: article.slug ?? "",
     excerpt: article.excerpt ?? "",
     content: article.content ?? "",
-    category: article.category ?? "",
+    category: normalizeArticleCategory(article.category),
     cover_image_url: article.cover_image_url ?? "",
     status: normalizeStatus(article.status)
   };
