@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Av. İdris Dağkesen Web Sitesi
 
 Next.js 14 App Router, TypeScript, TailwindCSS ve MDX tabanlı avukat web sitesi. Site; dijital kartvizit, uzmanlık alanları vitrini ve anlaşılır hukuk yazıları platformu olarak tasarlandı.
@@ -145,3 +146,6 @@ Sitede görünen telefon, e-posta, WhatsApp ve sosyal medya bağlantıları `lib
 - `app/sitemap.ts` ile `/sitemap.xml` oluşturulur.
 - `app/robots.ts` ile `/robots.txt` oluşturulur.
 - Site URL'i için `NEXT_PUBLIC_SITE_URL` değişkenini ayarlayın.
+=======
+# avukat
+>>>>>>> ff695a55e49d21913d8ab3705ee4b43c1e462568
