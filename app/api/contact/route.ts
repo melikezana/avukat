@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { badRequestResponse, routeErrorResponse, validationErrorResponse } from "@/lib/api/responses";
+import { consumeRateLimit, createRateLimitKey, isSameOriginRequest } from "@/lib/admin/security";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const contactPayloadSchema = z.object({
@@ -48,6 +49,16 @@ const contactPayloadSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginRequest(request.headers)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Mesaj şu anda gönderilemiyor. Lütfen sayfayı yenileyip tekrar deneyin."
+        },
+        { status: 403 }
+      );
+    }
+
     let body: unknown;
 
     try {
@@ -63,6 +74,17 @@ export async function POST(request: Request) {
     }
 
     const { name, email, subject, message } = parsed.data;
+
+    if (!consumeRateLimit(createRateLimitKey("contact", request.headers, email), { limit: 5, windowMs: 10 * 60_000 })) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Çok kısa sürede çok fazla mesaj gönderildi. Lütfen biraz sonra tekrar deneyin."
+        },
+        { status: 429 }
+      );
+    }
+
     const supabase = createSupabaseServerClient();
     const { error } = await supabase.from("contact_messages").insert({
       name,

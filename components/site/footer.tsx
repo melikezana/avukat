@@ -11,10 +11,16 @@ const footerLinks = [
   { href: "/iletisim", label: "İletişim" }
 ];
 
+const legalLinks = [
+  { href: "/gizlilik", label: "Gizlilik" },
+  { href: "/kvkk-aydinlatma", label: "KVKK Aydınlatma" },
+  { href: "/kullanim-kosullari", label: "Kullanım Koşulları" }
+];
+
 export function Footer() {
   return (
     <footer className="border-t border-primary/10 bg-primary text-white">
-      <Container className="grid gap-10 py-12 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
+      <Container className="grid gap-10 py-12 md:grid-cols-[1.2fr_0.7fr_0.8fr_0.8fr]">
         <div>
           <div className="flex items-center gap-3">
             <span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-accent-2/50 bg-white/10">
@@ -65,6 +71,16 @@ export function Footer() {
           <p className="mb-4 text-sm font-semibold text-accent-2">Menü</p>
           <div className="space-y-3">
             {footerLinks.map((link) => (
+              <Link key={link.href} href={link.href} className="block text-sm text-white/70 transition hover:text-accent-2">
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="mb-4 text-sm font-semibold text-accent-2">Yasal</p>
+          <div className="space-y-3">
+            {legalLinks.map((link) => (
               <Link key={link.href} href={link.href} className="block text-sm text-white/70 transition hover:text-accent-2">
                 {link.label}
               </Link>

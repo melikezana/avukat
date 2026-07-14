@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { Send } from "lucide-react";
 
 type FormState = "idle" | "loading" | "success" | "error";
@@ -94,7 +95,9 @@ export function ContactForm() {
             required
             name="name"
             type="text"
+            maxLength={120}
             autoComplete="name"
+            aria-describedby="contact-privacy-note"
             className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
           />
         </div>
@@ -108,7 +111,9 @@ export function ContactForm() {
             required
             name="email"
             type="email"
+            maxLength={160}
             autoComplete="email"
+            aria-describedby="contact-privacy-note"
             className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
           />
         </div>
@@ -123,6 +128,7 @@ export function ContactForm() {
           required
           name="subject"
           type="text"
+          maxLength={160}
           className="mt-2 h-12 w-full rounded-[6px] border border-primary/10 bg-white px-4 text-sm transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
         />
       </div>
@@ -136,6 +142,8 @@ export function ContactForm() {
           required
           name="message"
           rows={7}
+          maxLength={4000}
+          aria-describedby="contact-privacy-note"
           className="mt-2 w-full resize-y rounded-[6px] border border-primary/10 bg-white px-4 py-3 text-sm leading-7 transition focus:border-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
         />
       </div>
@@ -151,6 +159,9 @@ export function ContactForm() {
 
       {feedback && (
         <p
+          id="contact-feedback"
+          role="status"
+          aria-live="polite"
           className={`mt-4 text-sm font-medium ${
             state === "success"
               ? "text-green-700"
@@ -163,9 +174,21 @@ export function ContactForm() {
         </p>
       )}
 
-      <p className="mt-4 text-xs leading-6 text-muted">
+      <p id="contact-privacy-note" className="mt-4 text-xs leading-6 text-muted">
         Bu form üzerinden paylaştığınız kişisel veriler yalnızca talebinizi
-        değerlendirmek ve sizinle iletişime geçmek amacıyla işlenir.
+        değerlendirmek ve sizinle iletişime geçmek amacıyla işlenir. Detaylar için{" "}
+        <Link href="/gizlilik" className="font-semibold text-accent-1 underline underline-offset-4">
+          Gizlilik Politikası
+        </Link>
+        ,{" "}
+        <Link href="/kvkk-aydinlatma" className="font-semibold text-accent-1 underline underline-offset-4">
+          KVKK Aydınlatma Metni
+        </Link>{" "}
+        ve{" "}
+        <Link href="/kullanim-kosullari" className="font-semibold text-accent-1 underline underline-offset-4">
+          Kullanım Koşulları
+        </Link>{" "}
+        sayfalarını inceleyebilirsiniz.
       </p>
     </form>
   );

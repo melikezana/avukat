@@ -9,6 +9,7 @@ import { SectionIntro } from "@/components/ui/section-intro";
 import { getAllArticles } from "@/lib/articles";
 import { getCategoryFilterHref } from "@/lib/categories";
 import { practiceAreas } from "@/lib/data/practice-areas";
+import { getLegalServiceJsonLd, getPersonJsonLd, getWebsiteJsonLd } from "@/lib/seo";
 import { lawyerProfile, portraitBlurDataUrl } from "@/lib/site-profile";
 
 const trustBadges = [
@@ -32,9 +33,16 @@ const approachCards = [
 
 export default function HomePage() {
   const latestArticles = getAllArticles().slice(0, 3);
+  const jsonLd = [getWebsiteJsonLd(), getPersonJsonLd(), getLegalServiceJsonLd()];
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd)
+        }}
+      />
       <section className="overflow-hidden border-b border-gold-500/25 bg-cream-50">
         <Container className="grid items-center gap-12 py-12 md:py-16 lg:grid-cols-[0.95fr_1.05fr] lg:py-24">
           <Reveal className="lg:order-1">

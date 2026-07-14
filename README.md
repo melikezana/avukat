@@ -100,15 +100,16 @@ Başlık fontu için `Playfair Display`, gövde metni için `Inter` kullanılır
 
 ## İletişim Formu
 
-Form `app/api/contact/route.ts` API route'una gönderim yapar. Resend API anahtarı yoksa yerel geliştirmede önizleme modunda başarılı yanıt döner; gerçek e-posta gönderimi için Resend değişkenleri ayarlanmalıdır.
+Form `app/api/contact/route.ts` API route'una gönderim yapar ve doğrulanan mesajları Supabase `public.contact_messages` tablosuna kaydeder. Gerçek e-posta gönderimi admin panelindeki mesaj yanıt akışında Resend üzerinden yapılır.
 
 Gerçek e-posta gönderimi için `.env.local` dosyasına şu alanları ekleyin:
 
 ```bash
 RESEND_API_KEY="re_xxxxxxxxx"
 CONTACT_EMAIL="Av.idrisdagkesen@gmail.com"
+EMAIL_FROM="Av. İdris Dağkesen <iletisim@idrisdagkesen.com>"
 CONTACT_FROM_EMAIL="Av.idrisdagkesen@gmail.com"
-NEXT_PUBLIC_SITE_URL="https://www.idrisdagkesen.av.tr"
+NEXT_PUBLIC_SITE_URL="https://www.idrisdagkesen.com"
 ```
 
 Örnek ortam değişkenleri için `.env.example` dosyasını kullanın. Gerçek API anahtarlarını bu dosyaya ya da GitHub'a eklemeyin.
@@ -125,14 +126,15 @@ Vercel panelinde proje ayarlarından `Settings > Environment Variables` bölüm�
 
 | Değişken | Zorunluluk | Açıklama |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Zorunlu | Üretim alan adı. Örnek: `https://www.idrisdagkesen.av.tr` |
+| `NEXT_PUBLIC_SITE_URL` | Zorunlu | Üretim alan adı. Örnek: `https://www.idrisdagkesen.com` |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase kullanımı için zorunlu | Supabase proje URL'i. Örnek: `https://your-project-ref.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase kullanımı için zorunlu | Supabase publishable key değeri. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin görsel yükleme için zorunlu | Sunucu tarafında, yönetici oturumu doğrulandıktan sonra `article-images` Storage bucket'ına yazmak için kullanılan gizli Supabase anahtarı. Client'a gönderilmez. |
 | `SUPABASE_SECRET_KEY` | Alternatif admin anahtarı | `SUPABASE_SERVICE_ROLE_KEY` yoksa upload route'u bu değeri kullanır. Client'a gönderilmez. |
-| `RESEND_API_KEY` | Gerçek mail için zorunlu | İletişim formunun e-posta göndermesi için Resend API anahtarı. |
+| `RESEND_API_KEY` | Admin yanıt e-postası için zorunlu | Admin panelinden gelen mesaj sahibine gerçek e-posta yanıtı göndermek için Resend API anahtarı. |
 | `CONTACT_EMAIL` | Önerilir | Form mesajlarının gideceği adres. |
-| `CONTACT_FROM_EMAIL` | Önerilir | Resend'de doğrulanmış gönderici adresi. Yazılmazsa `CONTACT_EMAIL` kullanılır. |
+| `EMAIL_FROM` | Önerilir | Admin panelinden gönderilen yanıtlarda kullanılacak doğrulanmış gönderen. Örnek: `Av. İdris Dağkesen <iletisim@idrisdagkesen.com>` |
+| `CONTACT_FROM_EMAIL` | Geriye dönük destek | Eski gönderici değişkeni. `EMAIL_FROM` yoksa fallback olarak kullanılabilir. |
 
 Admin girişi Supabase Auth e-posta/şifre akışıyla yapılır. Ayrı admin kullanıcı adı, şifre hash'i veya oturum sırrı değişkeni kullanılmaz.
 
@@ -152,7 +154,7 @@ Deploy öncesinde yerelde `npm run lint` ve `npm run build` komutlarının hatas
 ## Custom Domain Bağlama
 
 1. Vercel'de projeyi açın ve `Settings > Domains` bölümüne girin.
-2. Kullanmak istediğiniz alan adını ekleyin: örnek `www.idrisdagkesen.av.tr`.
+2. Kullanmak istediğiniz alan adını ekleyin: örnek `www.idrisdagkesen.com`.
 3. Vercel'in verdiği DNS kaydını alan adı sağlayıcınızın paneline girin. Genellikle `www` için `CNAME` kaydı kullanılır.
 4. Kök alan adı da kullanılacaksa Vercel'in gösterdiği `A` veya `CNAME` yönlendirmesini ayrıca ekleyin.
 5. DNS yayılımı tamamlandıktan sonra Vercel otomatik SSL sertifikasını üretir.
@@ -176,3 +178,110 @@ Sitede görünen telefon, e-posta, WhatsApp ve sosyal medya bağlantıları `lib
 - `app/sitemap.ts` ile `/sitemap.xml` oluşturulur.
 - `app/robots.ts` ile `/robots.txt` oluşturulur.
 - Site URL'i için `NEXT_PUBLIC_SITE_URL` değişkenini ayarlayın.
+
+## Canlı Yayın Öncesi Ortam Değişkenleri
+
+Ana üretim domaini:
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://www.idrisdagkesen.com
+```
+
+| Değişken | Zorunlu mu? | Public/Secret | Nereden alınır ve ne işe yarar? | Vercel ortamı |
+| --- | --- | --- | --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Zorunlu | Public | Canonical, sitemap, robots, Open Graph ve JSON-LD için ana site URL'i. | Production, Preview, Development |
+| `NEXT_PUBLIC_SUPABASE_URL` | Zorunlu | Public | Supabase Project Settings > API bölümündeki proje URL'i. | Tümü |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Zorunlu | Public | Supabase publishable/anon key. Browser ve SSR public client için kullanılır. | Tümü |
+| `SUPABASE_SECRET_KEY` | Admin işlemleri için zorunlu | Secret | Server-side admin/storage işlemleri için Supabase secret/service role key. Client'a yazılmaz. | Production ve güvenli Preview |
+| `SUPABASE_SERVICE_ROLE_KEY` | Alternatif secret | Secret | `SUPABASE_SECRET_KEY` yerine veya onunla birlikte kullanılabilir. | Production ve güvenli Preview |
+| `GOOGLE_SITE_VERIFICATION` | Opsiyonel | Secret sayılmaz | Google Search Console meta doğrulama değeri. Boşsa meta etiketi üretilmez. | Production |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Opsiyonel | Public | GA4 Admin > Data streams bölümündeki `G-...` Measurement ID. GTM tanımlıysa doğrudan GA4 devre dışı kalır. | Production |
+| `NEXT_PUBLIC_GTM_ID` | Opsiyonel | Public | Google Tag Manager container ID (`GTM-...`). GA4'ü GTM üzerinden yönetmek için kullanılır. | Production |
+| `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_URL` | Opsiyonel | Public | Google Maps > Paylaş > Harita yerleştir bölümündeki `https://www.google.com/maps/embed...` URL'i. | Production |
+| `RESEND_API_KEY` | Gerçek e-posta için zorunlu | Secret | Resend API Keys bölümünden alınır. | Production |
+| `EMAIL_FROM` | Gerçek e-posta için önerilir | Secret sayılmaz ama server-only tutulmalı | Resend'de doğrulanmış gönderen. Örnek: `Av. İdris Dağkesen <iletisim@idrisdagkesen.com>`. | Production |
+| `CONTACT_EMAIL` | Önerilir | Secret sayılmaz | Yanıtların `reply_to` adresi ve iletişim adresi. | Production |
+
+Gerçek secret/API key değerlerini kaynak koda, README'ye veya client componentlerine yazmayın.
+
+## Google Search Console
+
+1. Google Search Console'da Domain property veya `https://www.idrisdagkesen.com` için URL-prefix property oluşturun.
+2. Domain property için DNS TXT kaydı, URL-prefix için meta etiketi doğrulaması kullanın. Meta doğrulamada verilen değeri `GOOGLE_SITE_VERIFICATION` olarak Vercel'e ekleyin.
+3. Doğrulama tamamlandıktan sonra `https://www.idrisdagkesen.com/sitemap.xml` adresini gönderin.
+4. HTTPS ve `www` sürümünün aktif olduğunu, root domainin `www` adresine 308 ile yönlendiğini kontrol edin.
+
+Search Console mülk oluşturma, DNS kaydı ekleme ve Google tarafındaki doğrulama Codex tarafından dış serviste otomatik tamamlanamaz; alan adı ve Google hesabı sahibi tarafından yapılmalıdır.
+
+## GA4, GTM ve Çerez/KVKK Notu
+
+İki kullanım yöntemi desteklenir:
+
+- A) Doğrudan GA4: `NEXT_PUBLIC_GA_MEASUREMENT_ID` girilir, `NEXT_PUBLIC_GTM_ID` boş kalır.
+- B) GTM üzerinden GA4: `NEXT_PUBLIC_GTM_ID` girilir, GA4 tag'i GTM içinde yönetilir.
+
+`NEXT_PUBLIC_GTM_ID` varsa kod doğrudan GA4 scriptini varsayılan olarak yüklemez. İkisini aynı anda etkinleştirmek veya GTM içinde ayrıca page view tetiklemek çift ölçüm oluşturabilir. Google scriptleri production dışında çalışmaz ve kullanıcı analitik tercihi kabul edilmeden yüklenmez. GA4/GTM kullanımı çerez ve KVKK yükümlülüğü doğurabileceğinden yayına alınmadan önce hukuki/KVKK danışmanlığı alınmalıdır.
+
+Vercel Analytics ve Speed Insights root layout'a eklenmiştir. Vercel panelinde proje bazında ayrıca etkinleştirilmesi gerekebilir.
+
+## Google Maps Embed
+
+1. Google Maps'te ofis konumunu açın.
+2. Paylaş > Harita yerleştir bölümünden iframe kodunu alın.
+3. Kodun tamamını değil, sadece `src` içindeki `https://www.google.com/maps/embed...` URL'ini `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_URL` olarak Vercel'e girin.
+4. Ofis adresi kesin değilse değişkeni boş bırakın; site kurumsal placeholder göstermeye devam eder.
+
+## Resend ile Admin Yanıtları
+
+Admin mesaj yanıt sistemi `RESEND_API_KEY`, `EMAIL_FROM` ve `CONTACT_EMAIL` değerleri varsa gerçek e-posta gönderir. Eksikse kullanıcıya yapılandırma eksik mesajı gösterir. Resend domain doğrulaması Resend panelinde manuel yapılmalıdır; gönderici domain doğrulanmadan production e-posta gönderimi çalışmayabilir veya kısıtlanabilir.
+
+Yanıt tarihi ve yanıt metni için şu migration Supabase SQL Editor'da manuel çalıştırılmalıdır:
+
+```text
+supabase/migrations/20260714_production_features.sql
+```
+
+Bu migration otomatik çalıştırılmadı.
+
+## Yasal Metinler
+
+Şu public sayfalar taslak olarak eklendi:
+
+- `/gizlilik`
+- `/kvkk-aydinlatma`
+- `/kullanim-kosullari`
+
+Bu metinler profesyonel taslak niteliğindedir. Yayına alınmadan önce hukukçu tarafından gözden geçirilmelidir.
+
+## Yedekleme Planı
+
+- Supabase'in otomatik yedekleme özelliklerini proje planına göre kontrol edin.
+- Veritabanı exportlarını düzenli alın.
+- Storage dosyalarını veritabanından ayrı yedekleyin.
+- GitHub repository yedeğini koruyun.
+- Environment variable listesini güvenli bir parola yöneticisinde saklayın; secret değerleri repoya eklemeyin.
+- Aylık manuel yedek kontrolü yapın.
+- Belirli aralıklarla restore testi planlayın.
+
+Opsiyonel export scriptleri:
+
+```bash
+npx tsx scripts/export-articles.ts
+npx tsx scripts/export-contact-messages.ts
+```
+
+Scriptler `SUPABASE_SERVICE_ROLE_KEY` veya `SUPABASE_SECRET_KEY` değerini environment variable'dan okur ve çıktıları `backups/` klasörüne yazar. `backups/` git dışında bırakılmıştır.
+
+## Canlıda Manuel Test Edilecek URL'ler
+
+- `https://www.idrisdagkesen.com/`
+- `https://www.idrisdagkesen.com/hakkimda`
+- `https://www.idrisdagkesen.com/uzmanlik-alanlari`
+- `https://www.idrisdagkesen.com/makaleler`
+- `https://www.idrisdagkesen.com/iletisim`
+- `https://www.idrisdagkesen.com/gizlilik`
+- `https://www.idrisdagkesen.com/kvkk-aydinlatma`
+- `https://www.idrisdagkesen.com/kullanim-kosullari`
+- `https://www.idrisdagkesen.com/sitemap.xml`
+- `https://www.idrisdagkesen.com/robots.txt`
+- `https://www.idrisdagkesen.com/yonetim-giris`

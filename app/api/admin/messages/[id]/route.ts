@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { routeErrorResponse } from "@/lib/api/responses";
+import { consumeRateLimit, createRateLimitKey } from "@/lib/admin/security";
 import { adminUnauthorizedResponse, requireAdminRequest } from "@/lib/admin/request";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -29,8 +30,12 @@ function adminMessageErrorResponse(action: "update" | "delete", code?: string) {
 
 export async function PATCH(request: Request, { params }: MessageRouteParams) {
   try {
-    if (!(await requireAdminRequest())) {
+    if (!(await requireAdminRequest(request))) {
       return adminUnauthorizedResponse();
+    }
+
+    if (!consumeRateLimit(createRateLimitKey("admin-message-update", request.headers, params.id), { limit: 30, windowMs: 60_000 })) {
+      return NextResponse.json({ ok: false, message: "Çok kısa sürede çok fazla işlem yapıldı." }, { status: 429 });
     }
 
     const body = await request.json().catch(() => null);
@@ -51,7 +56,9 @@ export async function PATCH(request: Request, { params }: MessageRouteParams) {
     if (error) {
       console.error("[admin.contact-messages.update]", {
         code: error.code,
-        message: error.message
+        message: error.message,
+        details: error.details,
+        hint: error.hint
       });
 
       return adminMessageErrorResponse("update", error.code);
@@ -69,8 +76,12 @@ export async function PATCH(request: Request, { params }: MessageRouteParams) {
 
 export async function DELETE(_request: Request, { params }: MessageRouteParams) {
   try {
-    if (!(await requireAdminRequest())) {
+    if (!(await requireAdminRequest(_request))) {
       return adminUnauthorizedResponse();
+    }
+
+    if (!consumeRateLimit(createRateLimitKey("admin-message-delete", _request.headers, params.id), { limit: 12, windowMs: 60_000 })) {
+      return NextResponse.json({ ok: false, message: "Çok kısa sürede çok fazla silme denemesi yapıldı." }, { status: 429 });
     }
 
     const supabase = createSupabaseServerClient();
@@ -79,7 +90,9 @@ export async function DELETE(_request: Request, { params }: MessageRouteParams) 
     if (error) {
       console.error("[admin.contact-messages.delete]", {
         code: error.code,
-        message: error.message
+        message: error.message,
+        details: error.details,
+        hint: error.hint
       });
 
       return adminMessageErrorResponse("delete", error.code);

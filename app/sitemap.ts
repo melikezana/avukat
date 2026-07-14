@@ -1,21 +1,39 @@
 import type { MetadataRoute } from "next";
-import { getAllPublicArticleMetas } from "@/lib/public-articles";
+import { getAllPublicArticleMetas, getPublicSiteUrl } from "@/lib/public-articles";
+
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.idrisdagkesen.av.tr";
-  const routes = ["", "/hakkimda", "/uzmanlik-alanlari", "/makaleler", "/iletisim"].map((route) => ({
-    url: `${siteUrl}${route}`,
+  const siteUrl = getPublicSiteUrl();
+  const staticRoutes = [
+    "",
+    "/hakkimda",
+    "/uzmanlik-alanlari",
+    "/makaleler",
+    "/iletisim",
+    "/gizlilik",
+    "/kvkk-aydinlatma",
+    "/kullanim-kosullari"
+  ];
+  const routes = staticRoutes.map((route) => ({
+    url: new URL(route || "/", siteUrl).toString(),
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: route === "" ? 1 : 0.7
   }));
 
   const articles = (await getAllPublicArticleMetas()).map((article) => ({
-    url: `${siteUrl}/makaleler/${article.slug}`,
+    url: new URL(`/makaleler/${article.slug}`, siteUrl).toString(),
     lastModified: new Date(article.updatedAt || article.date),
     changeFrequency: "weekly" as const,
     priority: 0.8
   }));
 
-  return [...routes, ...articles];
+  const uniqueEntries = new Map<string, MetadataRoute.Sitemap[number]>();
+
+  for (const entry of [...routes, ...articles]) {
+    uniqueEntries.set(entry.url, entry);
+  }
+
+  return Array.from(uniqueEntries.values());
 }

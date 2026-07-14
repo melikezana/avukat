@@ -21,8 +21,14 @@ export function SiteShell({ children }: SiteShellProps) {
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only z-[80] rounded-[6px] bg-primary px-4 py-3 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        Ana içeriğe geç
+      </a>
       <Header />
-      <main>{children}</main>
+      <main id="main-content">{children}</main>
       <Footer />
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   CheckCircle2,
@@ -24,6 +24,8 @@ export type AdminMessage = {
   message: string | null;
   status: string | null;
   created_at: string | null;
+  replied_at?: string | null;
+  reply_body?: string | null;
 };
 
 type MessageStatus = "new" | "read" | "answered" | "archived";
@@ -156,6 +158,7 @@ export function AdminMessagesManager({ initialMessages }: AdminMessagesManagerPr
   const [replySubject, setReplySubject] = useState("");
   const [replyBody, setReplyBody] = useState("");
   const [replySending, setReplySending] = useState(false);
+  const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const filteredMessages = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("tr-TR");
@@ -184,6 +187,23 @@ export function AdminMessagesManager({ initialMessages }: AdminMessagesManagerPr
       setPage(totalPages);
     }
   }, [page, totalPages]);
+
+  useEffect(() => {
+    if (!replyTarget) {
+      return;
+    }
+
+    replyTextareaRef.current?.focus();
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setReplyTarget(null);
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [replyTarget]);
 
   async function updateMessageStatus(messageId: string, status: MessageStatus) {
     setBusyId(messageId);
@@ -286,7 +306,11 @@ export function AdminMessagesManager({ initialMessages }: AdminMessagesManagerPr
       }
 
       setMessages((current) =>
-        current.map((message) => (message.id === replyTarget.id ? { ...message, status: "answered" } : message))
+        current.map((message) =>
+          message.id === replyTarget.id
+            ? { ...message, status: "answered", replied_at: new Date().toISOString(), reply_body: replyBody }
+            : message
+        )
       );
       setFeedback({ type: "success", message: payload.message || "Yanıt gönderildi." });
       setReplyTarget(null);
@@ -451,6 +475,13 @@ export function AdminMessagesManager({ initialMessages }: AdminMessagesManagerPr
                     {item.message || "-"}
                   </p>
 
+                  {isExpanded && item.reply_body ? (
+                    <div className="mt-4 rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-7 text-emerald-900">
+                      <p className="font-bold">Gönderilen yanıt {item.replied_at ? `- ${formatDateTime(item.replied_at)}` : ""}</p>
+                      <p className="mt-2 whitespace-pre-wrap">{item.reply_body}</p>
+                    </div>
+                  ) : null}
+
                   <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
                     <button
                       type="button"
@@ -570,6 +601,7 @@ export function AdminMessagesManager({ initialMessages }: AdminMessagesManagerPr
                 </label>
                 <textarea
                   id="reply-body"
+                  ref={replyTextareaRef}
                   value={replyBody}
                   onChange={(event) => setReplyBody(event.target.value)}
                   rows={8}

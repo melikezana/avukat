@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { routeErrorResponse } from "@/lib/api/responses";
+import { consumeRateLimit, createRateLimitKey } from "@/lib/admin/security";
 import { adminUnauthorizedResponse, requireAdminRequest } from "@/lib/admin/request";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -28,14 +29,39 @@ function jsonError(message: string, status = 500) {
   return NextResponse.json({ ok: false, message }, { status });
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getReplySubject(subject?: string | null) {
+  const trimmed = subject?.trim() || "İletişim mesajınız";
+  return /^re:/i.test(trimmed) ? trimmed : `Re: ${trimmed}`;
+}
+
+function getEmailHtml(body: string) {
+  return `
+    <div style="font-family: Arial, sans-serif; color: #0A1628; line-height: 1.7;">
+      <p>Merhaba,</p>
+      <div>${escapeHtml(body).replace(/\n/g, "<br />")}</div>
+      <p style="margin-top: 24px;">Saygılarımla,<br />Av. İdris Dağkesen</p>
+    </div>
+  `;
+}
+
 async function sendResendEmail(to: string, subject: string, text: string) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.CONTACT_FROM_EMAIL || process.env.CONTACT_EMAIL;
+  const from = process.env.EMAIL_FROM || process.env.CONTACT_FROM_EMAIL || process.env.CONTACT_EMAIL;
+  const replyTo = process.env.CONTACT_EMAIL;
 
-  if (!apiKey || !from) {
+  if (!apiKey || !from || !replyTo) {
     return {
       ok: false,
-      message: "E-posta gönderim ayarları eksik. Lütfen Resend ayarlarını kontrol edin."
+      message: "E-posta gönderim ayarları eksik. Lütfen RESEND_API_KEY, EMAIL_FROM ve CONTACT_EMAIL değerlerini kontrol edin."
     };
   }
 
@@ -48,8 +74,10 @@ async function sendResendEmail(to: string, subject: string, text: string) {
     body: JSON.stringify({
       from,
       to: [to],
+      reply_to: replyTo,
       subject,
-      text
+      text,
+      html: getEmailHtml(text)
     })
   });
 
@@ -75,8 +103,12 @@ async function sendResendEmail(to: string, subject: string, text: string) {
 
 export async function POST(request: Request, { params }: MessageReplyRouteParams) {
   try {
-    if (!(await requireAdminRequest())) {
+    if (!(await requireAdminRequest(request))) {
       return adminUnauthorizedResponse();
+    }
+
+    if (!consumeRateLimit(createRateLimitKey("admin-message-reply", request.headers, params.id), { limit: 10, windowMs: 60_000 })) {
+      return jsonError("Çok kısa sürede çok fazla yanıt gönderme denemesi yapıldı. Lütfen biraz sonra tekrar deneyin.", 429);
     }
 
     const body = await request.json().catch(() => null);
@@ -109,21 +141,46 @@ export async function POST(request: Request, { params }: MessageReplyRouteParams
       return jsonError("Bu mesaj için geçerli bir alıcı e-postası bulunamadı.", 400);
     }
 
-    const emailResult = await sendResendEmail(recipient, parsed.data.subject, parsed.data.body);
+    const emailSubject = getReplySubject(message.subject || parsed.data.subject);
+    const emailResult = await sendResendEmail(recipient, emailSubject, parsed.data.body);
 
     if (!emailResult.ok) {
       return jsonError(emailResult.message);
     }
 
-    const { error: updateError } = await supabase.from("contact_messages").update({ status: "answered" }).eq("id", params.id);
+    const replyDate = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("contact_messages")
+      .update({
+        status: "answered",
+        replied_at: replyDate,
+        reply_body: parsed.data.body
+      })
+      .eq("id", params.id);
 
     if (updateError) {
       console.error("[admin.contact-messages.reply.status]", {
         code: updateError.code,
-        message: updateError.message
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint
       });
 
-      return jsonError("Yanıt gönderildi, ancak mesaj durumu güncellenemedi.");
+      const { error: fallbackError } = await supabase
+        .from("contact_messages")
+        .update({ status: "answered" })
+        .eq("id", params.id);
+
+      if (fallbackError) {
+        console.error("[admin.contact-messages.reply.statusFallback]", {
+          code: fallbackError.code,
+          message: fallbackError.message,
+          details: fallbackError.details,
+          hint: fallbackError.hint
+        });
+
+        return jsonError("Yanıt gönderildi, ancak mesaj durumu güncellenemedi.");
+      }
     }
 
     return NextResponse.json({
@@ -131,7 +188,9 @@ export async function POST(request: Request, { params }: MessageReplyRouteParams
       message: "Yanıt gönderildi.",
       item: {
         id: message.id,
-        status: "answered"
+        status: "answered",
+        replied_at: replyDate,
+        reply_body: parsed.data.body
       }
     });
   } catch (error) {

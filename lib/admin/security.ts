@@ -36,6 +36,21 @@ function getSiteOrigin() {
   }
 }
 
+export function getClientIp(headersList = headers()) {
+  const forwardedFor = getHeaderValue(headersList, "x-forwarded-for");
+
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+
+  return getHeaderValue(headersList, "x-real-ip") || "unknown";
+}
+
+export function createRateLimitKey(scope: string, headersList = headers(), identity?: string) {
+  const normalizedIdentity = identity?.trim().toLocaleLowerCase("tr-TR");
+  return `${scope}:${normalizedIdentity || getClientIp(headersList)}`;
+}
+
 export function isSameOriginRequest(headersList = headers()) {
   const origin = getHeaderValue(headersList, "origin");
 

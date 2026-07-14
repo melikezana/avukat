@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Home, Scale } from "lucide-react";
+import { ArrowRight, Home, Mail, Scale } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { lawyerProfile } from "@/lib/site-profile";
+
+export const metadata: Metadata = {
+  title: "Sayfa Bulunamadı",
+  robots: {
+    index: false,
+    follow: false
+  }
+};
 
 export default function NotFound() {
   return (
@@ -30,7 +39,15 @@ export default function NotFound() {
               href="/makaleler"
               className="inline-flex items-center justify-center gap-2 rounded-[6px] border border-accent-2/50 bg-white px-5 py-3 text-sm font-semibold text-primary transition duration-300 hover:border-primary"
             >
-              Makaleler
+              Makaleleri İncele
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+            <Link
+              href="/iletisim"
+              className="inline-flex items-center justify-center gap-2 rounded-[6px] border border-accent-2/50 bg-white px-5 py-3 text-sm font-semibold text-primary transition duration-300 hover:border-primary"
+            >
+              <Mail className="h-4 w-4" aria-hidden />
+              İletişime Geç
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>

@@ -5,13 +5,33 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
-import { ArrowLeft, CalendarDays, Clock, Instagram, Linkedin, Mail, MessageCircle, Phone, Twitter } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronRight,
+  Clock,
+  Instagram,
+  Linkedin,
+  Mail,
+  MessageCircle,
+  Phone,
+  Twitter,
+  UserRound
+} from "lucide-react";
 import { ArticleCard } from "@/components/articles/article-card";
 import { ArticleCover } from "@/components/articles/article-cover";
 import { Container } from "@/components/layout/container";
 import { getAllArticles } from "@/lib/articles";
+import { getCategoryFilterHref } from "@/lib/categories";
 import { formatDate } from "@/lib/format";
-import { getAllPublicArticleMetas, getPublicArticleBySlug, getRelatedArticles } from "@/lib/public-articles";
+import {
+  getAllPublicArticleMetas,
+  getArticleCanonicalUrl,
+  getPublicArticleBySlug,
+  getPublicSiteUrl,
+  getRelatedArticles,
+  type PublicArticle
+} from "@/lib/public-articles";
 import { contactInfo, lawyerProfile, portraitBlurDataUrl, socialLinks } from "@/lib/site-profile";
 
 type ArticlePageProps = {
@@ -30,20 +50,20 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const article = await getPublicArticleBySlug(params.slug);
 
   if (!article) {
-    return {
-      title: "Makale bulunamadı"
-    };
+    return {};
   }
 
   const title = article.metaTitle || article.title;
   const description = article.metaDescription || article.excerpt;
-  const image = article.ogImage || (article.coverImageExists ? article.coverImage : undefined);
+  const image = toAbsoluteUrl(article.ogImage || article.coverImage) || new URL("/opengraph-image", getPublicSiteUrl()).toString();
+  const canonical = getArticleCanonicalUrl(article);
 
   return {
     title,
     description,
+    authors: [{ name: article.author }],
     alternates: {
-      canonical: article.canonicalUrl || `/makaleler/${article.slug}`
+      canonical
     },
     openGraph: {
       title,
@@ -52,13 +72,20 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       publishedTime: article.publishedAt || article.date,
       modifiedTime: article.updatedAt,
       authors: [article.author],
-      ...(image ? { images: [image] } : {})
+      images: [
+        {
+          url: image,
+          width: 1200,
+          height: 630,
+          alt: title
+        }
+      ]
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      ...(image ? { images: [image] } : {})
+      images: [image]
     }
   };
 }
@@ -69,18 +96,26 @@ const mdxComponents = {
   )
 };
 
-function getArticleJsonLd(article: Awaited<ReturnType<typeof getPublicArticleBySlug>>) {
-  if (!article) {
-    return null;
+function toAbsoluteUrl(value?: string) {
+  if (!value) {
+    return undefined;
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.idrisdagkesen.av.tr";
-  const articleUrl = new URL(`/makaleler/${article.slug}`, siteUrl).toString();
-  const image = article.ogImage || article.coverImage;
+  try {
+    return new URL(value).toString();
+  } catch {
+    return new URL(value, getPublicSiteUrl()).toString();
+  }
+}
+
+function getArticleJsonLd(article: PublicArticle) {
+  const articleUrl = getArticleCanonicalUrl(article);
+  const image = toAbsoluteUrl(article.ogImage || article.coverImage) || new URL("/opengraph-image", getPublicSiteUrl()).toString();
+  const keywords = [article.focusKeyword, article.category].filter(Boolean);
 
   return {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": "BlogPosting",
     headline: article.metaTitle || article.title,
     description: article.metaDescription || article.excerpt,
     mainEntityOfPage: articleUrl,
@@ -94,7 +129,42 @@ function getArticleJsonLd(article: Awaited<ReturnType<typeof getPublicArticleByS
       "@type": "Person",
       name: lawyerProfile.name
     },
-    ...(image ? { image: [image] } : {})
+    image: [image],
+    articleSection: article.category,
+    ...(keywords.length ? { keywords } : {})
+  };
+}
+
+function getBreadcrumbJsonLd(article: PublicArticle) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Ana Sayfa",
+        item: getPublicSiteUrl()
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Makaleler",
+        item: new URL("/makaleler", getPublicSiteUrl()).toString()
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: article.category,
+        item: new URL(getCategoryFilterHref(article.category), getPublicSiteUrl()).toString()
+      },
+      {
+        "@type": "ListItem",
+        position: 4,
+        name: article.title,
+        item: getArticleCanonicalUrl(article)
+      }
+    ]
   };
 }
 
@@ -107,9 +177,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const allArticles = await getAllPublicArticleMetas();
   const relatedArticles = getRelatedArticles(article, allArticles, 3);
-  const encodedUrl = encodeURIComponent(`/makaleler/${article.slug}`);
+  const articleUrl = getArticleCanonicalUrl(article);
+  const encodedUrl = encodeURIComponent(articleUrl);
   const encodedTitle = encodeURIComponent(article.title);
   const jsonLd = getArticleJsonLd(article);
+  const breadcrumbJsonLd = getBreadcrumbJsonLd(article);
 
   return (
     <article className="bg-background">
@@ -121,8 +193,40 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           }}
         />
       ) : null}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbJsonLd)
+        }}
+      />
 
       <Container className="py-12 md:py-16">
+        <nav aria-label="İçerik yolu" className="mb-6 text-sm font-semibold text-muted">
+          <ol className="flex flex-wrap items-center gap-2">
+            <li>
+              <Link href="/" className="transition hover:text-accent-1">
+                Ana Sayfa
+              </Link>
+            </li>
+            <li className="inline-flex items-center gap-2">
+              <ChevronRight className="h-4 w-4 text-accent-1" aria-hidden />
+              <Link href="/makaleler" className="transition hover:text-accent-1">
+                Makaleler
+              </Link>
+            </li>
+            <li className="inline-flex items-center gap-2">
+              <ChevronRight className="h-4 w-4 text-accent-1" aria-hidden />
+              <Link href={getCategoryFilterHref(article.category)} className="transition hover:text-accent-1">
+                {article.category}
+              </Link>
+            </li>
+            <li className="inline-flex min-w-0 items-center gap-2 text-primary" aria-current="page">
+              <ChevronRight className="h-4 w-4 shrink-0 text-accent-1" aria-hidden />
+              <span className="truncate">{article.title}</span>
+            </li>
+          </ol>
+        </nav>
+
         <Link
           href="/makaleler"
           className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-accent-1 transition hover:text-accent-2"
@@ -146,6 +250,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               {formatDate(article.publishedAt || article.date)}
             </span>
             <span className="inline-flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-accent-1" aria-hidden />
+              {article.author}
+            </span>
+            <span className="inline-flex items-center gap-2">
               <Clock className="h-4 w-4 text-accent-1" aria-hidden />
               {article.readingTime} dakika okuma
             </span>
@@ -159,6 +267,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               width={1200}
               height={675}
               sizes="(min-width: 1024px) 896px, (min-width: 768px) calc(100vw - 4rem), 100vw"
+              priority
             />
           </div>
         </div>
@@ -182,7 +291,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             )}
 
             <div className="mt-10 rounded-[8px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900">
-              Bu yazı genel hukuki bilgilendirme amacı taşır; somut olayınıza ilişkin hukuki danışmanlık yerine geçmez.
+              Bu içerik genel bilgilendirme amacıyla hazırlanmıştır. Somut olayınıza ilişkin hukuki değerlendirme ve profesyonel danışmanlık yerine geçmez.
             </div>
           </div>
 

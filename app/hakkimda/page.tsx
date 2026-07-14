@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Award, BookOpenText, GraduationCap, Scale } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { Reveal } from "@/components/motion/reveal";
+import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import { PageHeader } from "@/components/ui/page-header";
 import { lawyerProfile, portraitBlurDataUrl } from "@/lib/site-profile";
 
@@ -40,7 +41,15 @@ export default function AboutPage() {
       />
 
       <section className="bg-white py-20">
-        <Container className="grid items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
+        <Container>
+          <Breadcrumbs
+            className="mb-10"
+            items={[
+              { name: "Ana Sayfa", href: "/" },
+              { name: "Hakkımda", href: "/hakkimda" }
+            ]}
+          />
+          <div className="grid items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
           <Reveal>
             <div className="relative mx-auto max-w-[480px]">
               <div
@@ -84,6 +93,7 @@ export default function AboutPage() {
               </p>
             </div>
           </Reveal>
+          </div>
         </Container>
       </section>
 

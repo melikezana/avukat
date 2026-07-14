@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
+import { isSameOriginRequest } from "@/lib/admin/security";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function requireAdminRequest() {
+export async function requireAdminRequest(request?: Request) {
+  if (request && !isSameOriginRequest(request.headers)) {
+    return false;
+  }
+
   const supabase = createSupabaseServerClient();
   const {
     data: { user }

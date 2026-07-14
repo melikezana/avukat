@@ -3,7 +3,6 @@
 import { LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AdminLoginFormProps = {
   nextPath?: string;
@@ -38,16 +37,20 @@ export function AdminLoginForm({ nextPath }: AdminLoginFormProps) {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
 
-      if (error) {
+    try {
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, password })
+      });
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+      if (!response.ok) {
         setState("error");
-        setFeedback(loginErrorMessage);
+        setFeedback(payload?.message || loginErrorMessage);
         return;
       }
     } catch {

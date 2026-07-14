@@ -9,7 +9,8 @@ import {
   type Article,
   type ArticleMeta
 } from "@/lib/articles";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { absoluteUrl, getSiteUrl } from "@/lib/site";
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 
 export type PublicArticleSource = "mdx" | "supabase";
 export type PublicArticleContentFormat = "mdx" | "html";
@@ -23,6 +24,8 @@ export type PublicArticleMeta = ArticleMeta & {
   ogImage?: string;
   focusKeyword?: string;
 };
+
+export type ArticleSummary = PublicArticleMeta;
 
 export type PublicArticle = PublicArticleMeta & {
   content: string;
@@ -48,6 +51,15 @@ type SupabaseArticleRow = {
   focus_keyword?: string | null;
   author_name?: string | null;
 };
+
+type SupabaseArticleStatusRow = {
+  id?: string | number | null;
+  slug?: string | null;
+  status?: string | null;
+};
+
+const publicArticleSelect =
+  "id,title,slug,excerpt,content,category,cover_image_url,status,published_at,created_at,updated_at,seo_title,seo_description,canonical_url,og_image_url,focus_keyword,author_name";
 
 function trimOptional(value?: string | null) {
   const trimmed = value?.trim();
@@ -124,23 +136,28 @@ function mapSupabaseArticle(row: SupabaseArticleRow): PublicArticle | null {
 }
 
 function sortByDateDesc<T extends { date: string }>(articles: T[]) {
-  return articles.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return articles.sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+
+    return (Number.isNaN(dateB) ? 0 : dateB) - (Number.isNaN(dateA) ? 0 : dateA);
+  });
 }
 
 function mergePublicArticles(mdxArticles: PublicArticleMeta[], supabaseArticles: PublicArticleMeta[]) {
   const seenSlugs = new Set<string>();
   const merged: PublicArticleMeta[] = [];
 
-  for (const article of mdxArticles) {
+  for (const article of supabaseArticles) {
     seenSlugs.add(article.slug);
     merged.push(article);
   }
 
-  for (const article of supabaseArticles) {
+  for (const article of mdxArticles) {
     if (seenSlugs.has(article.slug)) {
       console.warn("[public.articles.slugConflict]", {
         slug: article.slug,
-        priority: "mdx"
+        priority: "supabase"
       });
       continue;
     }
@@ -152,21 +169,54 @@ function mergePublicArticles(mdxArticles: PublicArticleMeta[], supabaseArticles:
   return sortByDateDesc(merged);
 }
 
+function logSupabaseError(
+  label: string,
+  error: { code?: string; message?: string; details?: string; hint?: string },
+  extra?: Record<string, unknown>
+) {
+  console.error(label, {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+    ...extra
+  });
+}
+
+function getSupabaseClientOrNull(label: string, extra?: Record<string, unknown>) {
+  try {
+    return createSupabasePublicServerClient();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Supabase client could not be created.";
+
+    logSupabaseError(
+      label,
+      {
+        code: "SUPABASE_CONFIG_ERROR",
+        message
+      },
+      extra
+    );
+
+    return null;
+  }
+}
+
 async function getPublishedSupabaseArticleRows() {
-  const supabase = createSupabaseServerClient();
+  const supabase = getSupabaseClientOrNull("[public.articles.supabase.list]");
+
+  if (!supabase) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from("articles")
-    .select("*")
+    .select(publicArticleSelect)
     .eq("status", "published")
     .order("published_at", { ascending: false, nullsFirst: false });
 
   if (error) {
-    console.error("[public.articles.supabase.list]", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint
-    });
+    logSupabaseError("[public.articles.supabase.list]", error);
 
     return [];
   }
@@ -185,34 +235,98 @@ export async function getAllPublicArticleMetas() {
   return mergePublicArticles(mdxArticles, supabaseArticles);
 }
 
-export async function getPublicArticleBySlug(slug: string) {
-  const mdxArticle = getMdxArticleBySlug(slug);
+async function getPublishedSupabaseArticleBySlug(slug: string) {
+  const supabase = getSupabaseClientOrNull("[public.articles.supabase.detail]", { slug });
 
-  if (mdxArticle) {
-    return mapMdxArticle(mdxArticle);
+  if (!supabase) {
+    return {
+      article: null,
+      error: true
+    };
   }
 
-  const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("articles")
-    .select("*")
+    .select(publicArticleSelect)
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();
 
   if (error) {
-    console.error("[public.articles.supabase.detail]", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      slug
-    });
+    logSupabaseError("[public.articles.supabase.detail]", error, { slug });
 
+    return {
+      article: null,
+      error: true
+    };
+  }
+
+  return {
+    article: data ? mapSupabaseArticle(data as SupabaseArticleRow) : null,
+    error: false
+  };
+}
+
+async function getSupabaseArticleStatusBySlug(slug: string) {
+  const supabase = getSupabaseClientOrNull("[public.articles.supabase.status]", { slug });
+
+  if (!supabase) {
     return null;
   }
 
-  return data ? mapSupabaseArticle(data as SupabaseArticleRow) : null;
+  const { data, error } = await supabase
+    .from("articles")
+    .select("id,slug,status")
+    .eq("slug", slug)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    logSupabaseError("[public.articles.supabase.status]", error, { slug });
+    return null;
+  }
+
+  return data as SupabaseArticleStatusRow | null;
+}
+
+function logSlugConflict(slug: string) {
+  console.warn("[public.articles.slugConflict]", {
+    slug,
+    priority: "supabase"
+  });
+}
+
+export function getPublicSiteUrl() {
+  return getSiteUrl();
+}
+
+export function getArticleCanonicalUrl(article: PublicArticleMeta) {
+  return article.canonicalUrl || absoluteUrl(`/makaleler/${article.slug}`);
+}
+
+export async function getPublicArticleBySlug(slug: string) {
+  const supabaseResult = await getPublishedSupabaseArticleBySlug(slug);
+
+  if (supabaseResult.article) {
+    const mdxArticle = getMdxArticleBySlug(slug);
+
+    if (mdxArticle) {
+      logSlugConflict(slug);
+    }
+
+    return supabaseResult.article;
+  }
+
+  if (!supabaseResult.error) {
+    const supabaseStatus = await getSupabaseArticleStatusBySlug(slug);
+
+    if (supabaseStatus && supabaseStatus.status !== "published") {
+      return null;
+    }
+  }
+
+  const mdxArticle = getMdxArticleBySlug(slug);
+  return mdxArticle ? mapMdxArticle(mdxArticle) : null;
 }
 
 export function getPublicArticleCategories(articles: PublicArticleMeta[]) {
@@ -223,6 +337,5 @@ export function getPublicArticleCategories(articles: PublicArticleMeta[]) {
 
 export function getRelatedArticles(article: PublicArticleMeta, articles: PublicArticleMeta[], limit = 3) {
   const sameCategory = articles.filter((item) => item.slug !== article.slug && item.category === article.category);
-  const fallback = articles.filter((item) => item.slug !== article.slug && item.category !== article.category);
-  return [...sameCategory, ...fallback].slice(0, limit);
+  return sameCategory.slice(0, limit);
 }

@@ -17,6 +17,8 @@ type ContactMessageRow = {
   message: string | null;
   status: string | null;
   created_at: string | null;
+  replied_at: string | null;
+  reply_body: string | null;
 };
 
 type MessagesResult =
@@ -40,16 +42,38 @@ async function getMessages(): Promise<MessagesResult> {
     redirect("/yonetim-giris?next=/admin/mesajlar");
   }
 
-  const { data, error } = await supabase
+  const extendedResponse = await supabase
     .schema("public")
     .from("contact_messages")
-    .select("id,name,email,subject,message,status,created_at")
+    .select("id,name,email,subject,message,status,created_at,replied_at,reply_body")
     .order("created_at", { ascending: false });
+  let data = extendedResponse.data as ContactMessageRow[] | null;
+  let error = extendedResponse.error;
+
+  if (extendedResponse.error) {
+    console.error("[admin.contact-messages.list.extended]", {
+      code: extendedResponse.error.code,
+      message: extendedResponse.error.message,
+      details: extendedResponse.error.details,
+      hint: extendedResponse.error.hint
+    });
+
+    const fallbackResponse = await supabase
+      .schema("public")
+      .from("contact_messages")
+      .select("id,name,email,subject,message,status,created_at")
+      .order("created_at", { ascending: false });
+
+    data = fallbackResponse.data as ContactMessageRow[] | null;
+    error = fallbackResponse.error;
+  }
 
   if (error) {
     console.error("[admin.contact-messages.list]", {
       code: error.code,
-      message: error.message
+      message: error.message,
+      details: error.details,
+      hint: error.hint
     });
 
     return {

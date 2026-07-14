@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { Reveal } from "@/components/motion/reveal";
+import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import { CategoryVisual } from "@/components/site/CategoryVisual";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCategoryFilterHref } from "@/lib/categories";
@@ -25,6 +26,13 @@ export default function PracticeAreasPage() {
 
       <section className="bg-white py-20">
         <Container>
+          <Breadcrumbs
+            className="mb-10"
+            items={[
+              { name: "Ana Sayfa", href: "/" },
+              { name: "Uzmanlık Alanları", href: "/uzmanlik-alanlari" }
+            ]}
+          />
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {practiceAreas.map((area) => (
               <Reveal key={area.slug}>

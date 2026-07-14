@@ -1,14 +1,34 @@
 import type { MetadataRoute } from "next";
+import { getSiteUrl } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.idrisdagkesen.av.tr";
+  const siteUrl = getSiteUrl();
+  const isPreview = process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production";
+
+  if (isPreview) {
+    return {
+      rules: {
+        userAgent: "*",
+        disallow: "/"
+      },
+      sitemap: new URL("/sitemap.xml", siteUrl).toString()
+    };
+  }
 
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin/", "/api/admin/"]
+      disallow: [
+        "/admin",
+        "/admin/",
+        "/yonetim-giris",
+        "/api/admin",
+        "/api/admin/",
+        "/admin/makaleler/onizleme",
+        "/admin/makaleler/onizleme/"
+      ]
     },
-    sitemap: `${siteUrl}/sitemap.xml`
+    sitemap: new URL("/sitemap.xml", siteUrl).toString()
   };
 }

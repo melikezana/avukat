@@ -5,11 +5,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ArticleCard } from "@/components/articles/article-card";
 import type { ArticleMeta } from "@/lib/articles";
+import type { PublicArticleMeta } from "@/lib/public-articles";
 import { slugifyTurkish } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
 type ArticleFiltersProps = {
-  articles: ArticleMeta[];
+  articles: Array<ArticleMeta | PublicArticleMeta>;
   categories: string[];
 };
 
@@ -30,7 +31,8 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
 
     return articles.filter((article) => {
       const matchesCategory = !activeCategorySlug || slugifyTurkish(article.category) === activeCategorySlug;
-      const searchable = `${article.title} ${article.slug} ${article.summary} ${article.excerpt} ${article.category}`.toLocaleLowerCase("tr-TR");
+      const focusKeyword = "focusKeyword" in article ? article.focusKeyword ?? "" : "";
+      const searchable = `${article.title} ${article.slug} ${article.summary} ${article.excerpt} ${article.category} ${focusKeyword}`.toLocaleLowerCase("tr-TR");
       const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
 
       return matchesCategory && matchesQuery;

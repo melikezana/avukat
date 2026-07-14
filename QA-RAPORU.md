@@ -1,38 +1,72 @@
 # QA Raporu
 
-Tarih: 2026-07-13
+Tarih: 2026-07-14
 
-Bu rapor yalnızca statik dosya incelemesi, kod düzenlemesi, `npm run lint` ve `npm run build` kapsamına göre hazırlanmıştır. Talimat gereği `npm run dev`, arka plan sunucusu, Lighthouse, tarayıcı otomasyonu, gerçek e-posta gönderimi ve Vercel deploy çalıştırılmamıştır.
+Kapsam: Statik kod incelemesi, `npm run lint` ve `npm run build`. Talimat gereği `npm run dev`, arka plan sunucusu, Lighthouse, tarayıcı otomasyonu, gerçek e-posta gönderimi, Supabase migration çalıştırma ve Vercel deploy yapılmadı.
 
-## Kontrol Listesi
+## PUBLIC
 
-| Kontrol | Durum | Not |
-| --- | --- | --- |
-| Mobil, tablet ve masaüstü responsive yapı | Kod üzerinden doğrulandı | Tailwind grid/flex kırılımları ve responsive `sizes` değerleri kod üzerinden incelendi. Tarayıcıda görsel kontrol yapılmadığı için son görsel QA manuel yapılmalıdır. |
-| Dahili linkler | Kod üzerinden doğrulandı | Navbar, footer, CTA, makale liste/detay ve 404 bağlantıları statik olarak kontrol edildi. |
-| Sosyal medya, telefon, e-posta ve WhatsApp linkleri | Kod üzerinden doğrulandı | Linkler `lib/site-profile.ts` üzerinden merkezi yönetiliyor. Instagram/X URL'leri, telefon, mailto ve WhatsApp bağlantıları statik olarak mevcut; canlı tıklama testi yapılmadı. |
-| Özel 404 sayfası | Tamamlandı | `app/not-found.tsx` eklendi ve site kimliğiyle uyumlu bağlantılar içeriyor. |
-| Admin paneli koruması | Manuel test gerekli | Kod tabanında admin paneli veya admin login route'u bulunmadı. Admin modülü eklendiğinde koruma ayrıca test edilmelidir. |
-| İletişim formu mail altyapısı | Kod üzerinden doğrulandı | Form `RESEND_API_KEY` ile Resend'e gönderim yapacak şekilde hazır. Gerçek mail gönderimi talimat gereği test edilmedi; manuel test gerekli. |
-| Görsel optimizasyonu | Kod üzerinden doğrulandı | Projedeki görseller `next/image` ile kullanılıyor. Ana sayfa hero görselinde `priority` var; hero dışındaki görsellerde priority kullanılmıyor ve `sizes` değerleri mevcut. |
-| Erişilebilirlik | Kod üzerinden doğrulandı | Image alt metinleri, iletişim formu `label/htmlFor/id` eşleşmeleri ve görünür `focus-visible` stilleri kod üzerinden kontrol edildi. Admin formu mevcut değil. |
-| Analytics | Tamamlandı | `@vercel/analytics` eklendi ve root layout içine `Analytics` componenti yerleştirildi. Çerez bannerı veya özel kişisel takip kodu eklenmedi. |
-| SEO | Kod üzerinden doğrulandı | Metadata, canonical, Open Graph, sitemap ve robots dosyaları mevcut. Yeni makaleler dosya olarak olmadığı için onların SEO çıktısı doğrulanamadı. |
-| npm run lint | Tamamlandı | `npm run lint` hatasız geçti: ESLint uyarısı veya hatası yok. |
-| npm run build | Tamamlandı | `npm run build` hatasız geçti. Build çıktısında mevcut 4 makale route'u üretildi; eksik iki MDX dosyası route olarak oluşmadı. |
+- [x] Ana sayfa route'u build edildi.
+- [x] Hakkımda route'u build edildi.
+- [x] Uzmanlık alanları route'u build edildi.
+- [x] Makale listesi route'u build edildi.
+- [x] MDX makale detay route'ları build edildi.
+- [x] Gizlilik/KVKK/Kullanım Koşulları sayfaları eklendi ve build edildi.
+- [x] 404, loading, error ve global-error yüzeyleri eklendi.
+- [ ] Supabase published makaleler canlı veritabanıyla manuel test gerekli.
+- [ ] Taslakların public sitede görünmediği canlı veritabanıyla manuel test gerekli.
+- [ ] İletişim formu gerçek Supabase ortamında manuel test gerekli.
 
-## İçerik Entegrasyonu Notları
+## SEO
 
-| Kontrol | Durum | Not |
-| --- | --- | --- |
-| `content/articles/gozaltina-alinirsaniz-haklariniz.mdx` | Manuel test gerekli | Dosya çalışma alanında bulunamadı; makale gövdesi olmadığı için frontmatter uyarlaması yapılamadı. |
-| `content/articles/sirket-kurmadan-once-bilmeniz-gerekenler.mdx` | Manuel test gerekli | Dosya çalışma alanında bulunamadı; makale gövdesi olmadığı için frontmatter uyarlaması yapılamadı. |
-| `content/site-metinleri-final.md` | Manuel test gerekli | Dosya çalışma alanında bulunamadı; final metinler ilgili component'lere birebir yerleştirilemedi. |
-| Kategori filtresinde Ceza Hukuku ve Ticaret Hukuku | Tamamlandı | `lib/articles.ts` öncelikli kategori listesine iki kategori eklendi. |
-| Uzmanlık Alanları 6 kart | Tamamlandı | Kira, İş, Aile, Ceza, Ticaret ve Gayrimenkul Hukuku kartları `lib/data/practice-areas.ts` içinde oluşturuldu. |
+- [x] Canonical URL merkezi `NEXT_PUBLIC_SITE_URL` config'ine bağlandı.
+- [x] Global Open Graph ve Twitter Card metadata eklendi.
+- [x] Dinamik `opengraph-image`, `twitter-image`, `icon`, `apple-icon` ve manifest eklendi.
+- [x] Person, WebSite ve LegalService JSON-LD ana sayfaya eklendi.
+- [x] Breadcrumb görsel nav ve BreadcrumbList JSON-LD public alt sayfalara eklendi.
+- [x] Article/BlogPosting schema MDX ve Supabase published makaleler için üretilecek şekilde güncellendi.
+- [x] `sitemap.xml` public sayfalar, yasal sayfalar, MDX ve Supabase published makaleleri içerir.
+- [x] `robots.txt` production dışı preview ortamlarında noindex/disallow davranışı kullanır.
+- [ ] Search Console doğrulaması dış serviste manuel yapılmalı.
+- [ ] Canlı `sitemap.xml` ve `robots.txt` URL'leri deploy sonrası manuel açılmalı.
 
-## Lighthouse
+## ADMIN
 
-Durum: Manuel test gerekli
+- [x] `/admin` sayfaları middleware ile Supabase oturumuna bağlı kalıyor.
+- [x] Admin login server-side route'a taşındı ve rate limit eklendi.
+- [x] Admin dashboard gerçek Supabase sayımlarını ve son kayıtları göstermeye hazır.
+- [x] Mesaj listeleme, durum değiştirme, silme ve yanıt API'lerinde same-origin/rate-limit kontrolleri var.
+- [x] Resend yanıt sistemi `RESEND_API_KEY`, `EMAIL_FROM`, `CONTACT_EMAIL` ile server-side çalışacak şekilde hazır.
+- [x] Medya kütüphanesi bucket listeleme, URL/HTML kopyalama ve güvenli silme API'si içeriyor.
+- [ ] Makale oluşturma/taslak/yayınlama/düzenleme/silme gerçek Supabase ortamında manuel test edilmeli.
+- [ ] Görsel yükleme ve medya silme canlı bucket üzerinde manuel test edilmeli.
+- [ ] E-posta yanıtı Resend domain doğrulaması sonrası manuel test edilmeli.
 
-Talimat gereği Lighthouse çalıştırılmadı. Performance, Accessibility, Best Practices ve SEO skorları için canlı/preview ortamda tarayıcı üzerinden Lighthouse veya Vercel Speed Insights kontrolü ayrıca yapılmalıdır.
+## GÜVENLİK
+
+- [x] Secret key client koduna eklenmedi.
+- [x] Contact form honeypot, Zod validation, same-origin ve rate-limit içeriyor.
+- [x] Admin login, upload, mesaj ve medya mutasyonlarında rate-limit var.
+- [x] Resend API key yalnızca server route içinde kullanılıyor.
+- [x] Security headers ve CSP `next.config.mjs` üzerinden eklendi.
+- [x] Server error loglarında Supabase `code`, `message`, `details`, `hint` alanları kritik yerlerde korunuyor.
+- [x] Supabase migration dosyası RLS, index ve reply alanlarını idempotent şekilde içeriyor.
+- [ ] RLS politikaları Supabase SQL Editor'da migration çalıştırıldıktan sonra manuel doğrulanmalı.
+- [ ] Client bundle secret taraması deploy çıktısında manuel doğrulanmalı.
+
+## BUILD
+
+- [x] `npm run lint` başarılı.
+- [x] `npm run build` başarılı.
+- [x] TypeScript hataları düzeltildi.
+- [ ] Lighthouse çalıştırılmadı; canlı/preview ortamda manuel test gerekli.
+- [ ] Tarayıcı responsive ve erişilebilirlik QA'sı manuel yapılmalı.
+
+## Manuel Dış Servis Adımları
+
+- Google Search Console property oluşturma ve DNS/meta doğrulama.
+- `https://www.idrisdagkesen.com/sitemap.xml` gönderme.
+- Vercel Analytics ve Speed Insights panel aktivasyonu.
+- GA4 veya GTM ölçüm yapılandırması ve KVKK/çerez uygunluk değerlendirmesi.
+- Resend domain doğrulaması.
+- Supabase SQL Editor'da `supabase/migrations/20260714_production_features.sql` çalıştırma.

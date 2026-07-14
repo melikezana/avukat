@@ -11,16 +11,34 @@ type ArticleCoverProps = {
   sizes: string;
   className?: string;
   imageClassName?: string;
+  priority?: boolean;
 };
 
 function isRemoteImage(src: string) {
   return /^https?:\/\//i.test(src);
 }
 
-function isSupabaseArticleImage(src: string) {
+function getConfiguredSupabaseStorageHostname() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  if (!supabaseUrl) {
+    return null;
+  }
+
+  try {
+    return new URL(supabaseUrl).hostname;
+  } catch {
+    return null;
+  }
+}
+
+function isConfiguredSupabaseArticleImage(src: string) {
   try {
     const url = new URL(src);
-    return url.pathname.startsWith("/storage/v1/object/public/article-images/");
+    return (
+      url.hostname === getConfiguredSupabaseStorageHostname() &&
+      url.pathname.startsWith("/storage/v1/object/public/article-images/")
+    );
   } catch {
     return false;
   }
@@ -34,7 +52,8 @@ export function ArticleCover({
   height = 450,
   sizes,
   className,
-  imageClassName
+  imageClassName,
+  priority = false
 }: ArticleCoverProps) {
   const baseClassName = cn("aspect-[16/9] w-full", className);
 
@@ -46,7 +65,9 @@ export function ArticleCover({
         width={width}
         height={height}
         sizes={sizes}
-        unoptimized={isRemoteImage(src) && !isSupabaseArticleImage(src)}
+        priority={priority}
+        loading={priority ? undefined : "lazy"}
+        unoptimized={isRemoteImage(src) && !isConfiguredSupabaseArticleImage(src)}
         className={cn(baseClassName, "object-cover", imageClassName)}
       />
     );
