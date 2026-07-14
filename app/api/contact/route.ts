@@ -1,13 +1,49 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { badRequestResponse, routeErrorResponse, validationErrorResponse } from "@/lib/api/responses";
-import { contactInfo } from "@/lib/config";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const contactPayloadSchema = z.object({
-  name: z.string().trim().min(2, "Ad soyad en az 2 karakter olmalıdır.").max(120),
-  email: z.string().trim().email("Geçerli bir e-posta adresi yazın.").max(160),
-  subject: z.string().trim().min(3, "Konu en az 3 karakter olmalıdır.").max(160),
-  message: z.string().trim().min(10, "Mesaj en az 10 karakter olmalıdır.").max(4000)
+  name: z.preprocess(
+    (value) => (typeof value === "string" ? value : ""),
+    z
+      .string()
+      .trim()
+      .min(1, "Ad soyad zorunludur.")
+      .min(2, "Ad soyad en az 2 karakter olmalıdır.")
+      .max(120, "Ad soyad en fazla 120 karakter olabilir.")
+  ),
+  email: z.preprocess(
+    (value) => (typeof value === "string" ? value : ""),
+    z
+      .string()
+      .trim()
+      .min(1, "E-posta zorunludur.")
+      .email("Geçerli bir e-posta adresi yazın.")
+      .max(160, "E-posta en fazla 160 karakter olabilir.")
+  ),
+  subject: z.preprocess(
+    (value) => (typeof value === "string" ? value : ""),
+    z
+      .string()
+      .trim()
+      .min(1, "Konu zorunludur.")
+      .min(3, "Konu en az 3 karakter olmalıdır.")
+      .max(160, "Konu en fazla 160 karakter olabilir.")
+  ),
+  message: z.preprocess(
+    (value) => (typeof value === "string" ? value : ""),
+    z
+      .string()
+      .trim()
+      .min(1, "Mesaj zorunludur.")
+      .min(10, "Mesaj en az 10 karakter olmalıdır.")
+      .max(4000, "Mesaj en fazla 4000 karakter olabilir.")
+  ),
+  company: z.preprocess(
+    (value) => (typeof value === "string" ? value : ""),
+    z.string().trim().max(0, "Form gönderimi doğrulanamadı. Lütfen tekrar deneyin.")
+  )
 });
 
 export async function POST(request: Request) {
@@ -27,52 +63,32 @@ export async function POST(request: Request) {
     }
 
     const { name, email, subject, message } = parsed.data;
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const contactEmail = process.env.CONTACT_EMAIL ?? process.env.CONTACT_TO_EMAIL ?? contactInfo.email;
-    const contactFrom = process.env.CONTACT_FROM_EMAIL ?? contactEmail;
-
-    if (!resendApiKey) {
-      return NextResponse.json({
-        ok: true,
-        preview: true,
-        message: "Mesajınız alındı. En kısa sürede dönüş yapılacaktır."
-      });
-    }
-
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: contactFrom,
-        to: contactEmail,
-        reply_to: email,
-        subject: `Web sitesi iletişim: ${subject}`,
-        text: `Ad Soyad: ${name}\nE-posta: ${email}\nKonu: ${subject}\n\n${message}`
-      })
+    const supabase = createSupabaseServerClient();
+    const { error } = await supabase.from("contact_messages").insert({
+      name,
+      email,
+      subject,
+      message
     });
 
-    if (!resendResponse.ok) {
-      const providerBody = await resendResponse.text().catch(() => "");
-      console.error("[contact.resend]", {
-        status: resendResponse.status,
-        body: providerBody
+    if (error) {
+      console.error("[contact.supabase.insert]", {
+        code: error.code,
+        message: error.message
       });
 
       return NextResponse.json(
         {
           ok: false,
-          message: "Mesaj gönderilirken bir sorun oluştu. Lütfen daha sonra tekrar deneyin."
+          message: "Mesajınız şu anda alınamıyor. Lütfen daha sonra tekrar deneyin."
         },
-        { status: 502 }
+        { status: 500 }
       );
     }
 
     return NextResponse.json({
       ok: true,
-      message: "Mesajınız gönderildi. En kısa sürede dönüş yapılacaktır."
+      message: "Mesajınız alındı. En kısa sürede dönüş yapılacaktır."
     });
   } catch (error) {
     return routeErrorResponse(error, "contact.submit");

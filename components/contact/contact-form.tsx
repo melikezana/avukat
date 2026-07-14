@@ -5,6 +5,23 @@ import { Send } from "lucide-react";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
+type ContactResponse = {
+  message?: string;
+  issues?: {
+    message: string;
+  }[];
+};
+
+function getErrorMessage(data: ContactResponse) {
+  const issueMessages = data.issues?.map((issue) => issue.message).filter(Boolean);
+
+  if (issueMessages?.length) {
+    return issueMessages.join(" ");
+  }
+
+  return data.message ?? "Mesaj gönderilemedi. Lütfen tekrar deneyin.";
+}
+
 export function ContactForm() {
   const [state, setState] = useState<FormState>("idle");
   const [feedback, setFeedback] = useState("");
@@ -17,29 +34,39 @@ export function ContactForm() {
     const formData = new FormData(event.currentTarget);
     const payload = Object.fromEntries(formData.entries());
 
-    const response = await fetch("/api/contact", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
 
-    const data = (await response.json()) as { message?: string };
+      const data = (await response.json()) as ContactResponse;
 
-    if (!response.ok) {
+      if (!response.ok) {
+        setState("error");
+        setFeedback(getErrorMessage(data));
+        return;
+      }
+
+      event.currentTarget.reset();
+      setState("success");
+      setFeedback(data.message ?? "Mesajınız alındı. En kısa sürede dönüş yapılacaktır.");
+    } catch {
       setState("error");
-      setFeedback(data.message ?? "Mesaj gönderilemedi. Lütfen tekrar deneyin.");
-      return;
+      setFeedback("Mesaj gönderilemedi. Lütfen bağlantınızı kontrol edip tekrar deneyin.");
     }
-
-    event.currentTarget.reset();
-    setState("success");
-    setFeedback(data.message ?? "Mesajınız alındı.");
   }
 
   return (
     <form onSubmit={handleSubmit} className="rounded-[8px] border border-primary/10 bg-background p-6 shadow-soft md:p-8">
+      <div className="hidden" aria-hidden="true">
+        <label htmlFor="contact-company">Şirket</label>
+        <input id="contact-company" name="company" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
+
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="contact-name" className="text-sm font-semibold text-primary">
@@ -107,6 +134,10 @@ export function ContactForm() {
           {feedback}
         </p>
       ) : null}
+
+      <p className="mt-4 text-xs leading-6 text-muted">
+        Bu form üzerinden paylaştığınız kişisel veriler yalnızca talebinizi değerlendirmek ve sizinle iletişime geçmek amacıyla işlenir.
+      </p>
     </form>
   );
 }
