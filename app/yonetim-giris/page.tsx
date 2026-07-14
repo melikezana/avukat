@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ShieldCheck } from "lucide-react";
+import { redirect } from "next/navigation";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Yönetim Girişi"
@@ -12,7 +14,16 @@ type AdminLoginPageProps = {
   };
 };
 
-export default function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
+export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
+  const supabase = createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/admin");
+  }
+
   return (
     <section className="flex min-h-screen items-center justify-center bg-slate-100 px-5 py-12 text-slate-950">
       <div className="w-full max-w-md">

@@ -1,16 +1,13 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import {
-  adminSessionCookieName,
-  getConfiguredSessionSecret,
-  verifyAdminSessionToken
-} from "@/lib/admin/session";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function requireAdminRequest() {
-  const token = cookies().get(adminSessionCookieName)?.value;
-  const session = await verifyAdminSessionToken(token, getConfiguredSessionSecret());
+  const supabase = createSupabaseServerClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
-  return Boolean(session);
+  return Boolean(user);
 }
 
 export function adminUnauthorizedResponse() {
@@ -20,5 +17,15 @@ export function adminUnauthorizedResponse() {
       message: "Bu işlem için yönetici oturumu gerekir."
     },
     { status: 401 }
+  );
+}
+
+export function adminWriteDisabledResponse() {
+  return NextResponse.json(
+    {
+      ok: false,
+      message: "Makale yazma işlemleri geçici olarak devre dışı."
+    },
+    { status: 501 }
   );
 }

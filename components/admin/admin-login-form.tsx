@@ -3,12 +3,27 @@
 import { LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AdminLoginFormProps = {
   nextPath?: string;
 };
 
 type LoginState = "idle" | "loading" | "error";
+
+const loginErrorMessage = "E-posta veya şifre hatalı.";
+
+function getSafeAdminTarget(nextPath?: string) {
+  if (
+    nextPath === "/admin" ||
+    nextPath?.startsWith("/admin/") ||
+    nextPath?.startsWith("/admin?")
+  ) {
+    return nextPath;
+  }
+
+  return "/admin";
+}
 
 export function AdminLoginForm({ nextPath }: AdminLoginFormProps) {
   const router = useRouter();
@@ -21,37 +36,41 @@ export function AdminLoginForm({ nextPath }: AdminLoginFormProps) {
     setFeedback("");
 
     const formData = new FormData(event.currentTarget);
-    const response = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(Object.fromEntries(formData.entries()))
-    });
-    const data = (await response.json()) as { message?: string };
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-    if (!response.ok) {
+      if (error) {
+        setState("error");
+        setFeedback(loginErrorMessage);
+        return;
+      }
+    } catch {
       setState("error");
-      setFeedback(data.message ?? "Giriş yapılamadı.");
+      setFeedback(loginErrorMessage);
       return;
     }
 
-    const target = nextPath?.startsWith("/admin") ? nextPath : "/admin";
-    router.replace(target);
+    router.replace(getSafeAdminTarget(nextPath));
     router.refresh();
   }
 
   return (
     <form onSubmit={handleSubmit} className="rounded-[8px] border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
       <div>
-        <label htmlFor="admin-username" className="text-sm font-semibold text-slate-800">
-          Kullanıcı adı
+        <label htmlFor="admin-email" className="text-sm font-semibold text-slate-800">
+          E-posta
         </label>
         <input
-          id="admin-username"
-          name="username"
-          type="text"
-          autoComplete="username"
+          id="admin-email"
+          name="email"
+          type="email"
+          autoComplete="email"
           required
           className="mt-2 h-12 w-full rounded-[6px] border border-slate-300 px-4 text-sm transition focus:border-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700"
         />

@@ -1,25 +1,60 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import {
-  adminSessionCookieName,
-  getConfiguredSessionSecret,
-  verifyAdminSessionToken
-} from "@/lib/admin/session";
+import { createServerClient } from "@supabase/ssr";
+import { getSupabaseConfig } from "@/lib/supabase/config";
+
+function getAdminLoginUrl(request: NextRequest) {
+  const loginUrl = new URL("/yonetim-giris", request.url);
+  const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+
+  loginUrl.searchParams.set("next", nextPath);
+
+  return loginUrl;
+}
 
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get(adminSessionCookieName)?.value;
-  const session = await verifyAdminSessionToken(token, getConfiguredSessionSecret());
+  let response = NextResponse.next({
+    request
+  });
+  const { supabaseUrl, supabasePublishableKey } = getSupabaseConfig();
+  const supabase = createServerClient(supabaseUrl, supabasePublishableKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet, headers) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+        response = NextResponse.next({
+          request
+        });
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+        Object.entries(headers).forEach(([key, value]) => {
+          response.headers.set(key, value);
+        });
+      }
+    }
+  });
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const isAdminPath = request.nextUrl.pathname.startsWith("/admin");
+  const isLoginPath = request.nextUrl.pathname === "/yonetim-giris";
 
-  if (!session) {
-    const loginUrl = new URL("/yonetim-giris", request.url);
-    loginUrl.searchParams.set("next", request.nextUrl.pathname);
-
-    return NextResponse.redirect(loginUrl);
+  if (isAdminPath && !user) {
+    return NextResponse.redirect(getAdminLoginUrl(request));
   }
 
-  return NextResponse.next();
+  if (isLoginPath && user) {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ["/admin/:path*"]
+  matcher: ["/admin/:path*", "/yonetim-giris"]
 };

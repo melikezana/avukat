@@ -13,7 +13,7 @@ Geliştirme sunucusu varsayılan olarak `http://localhost:3000` adresinde açıl
 
 ## Supabase Kurulumu
 
-Supabase bağlantısı `lib/supabase/client.ts` ve `lib/supabase/server.ts` yardımcıları üzerinden kurulur. Browser ve server client'ları aynı public proje URL'i ve publishable key değerini kullanır.
+Supabase bağlantısı `lib/supabase/config.ts`, `lib/supabase/client.ts` ve `lib/supabase/server.ts` yardımcıları üzerinden kurulur. Browser ve server client'ları aynı public proje URL'i ve publishable key değerini kullanır.
 
 Yerel geliştirme için `.env.local` dosyasına şu alanları ekleyin:
 
@@ -97,7 +97,7 @@ CONTACT_FROM_EMAIL="Av.idrisdagkesen@gmail.com"
 NEXT_PUBLIC_SITE_URL="https://www.idrisdagkesen.av.tr"
 ```
 
-Örnek ortam değişkenleri için `.env.example` dosyasını kullanın. Gerçek API anahtarı, oturum sırrı veya şifre hash'i bu dosyaya ya da GitHub'a eklenmemelidir.
+Örnek ortam değişkenleri için `.env.example` dosyasını kullanın. Gerçek API anahtarlarını bu dosyaya ya da GitHub'a eklemeyin.
 
 ## Analytics
 
@@ -117,8 +117,8 @@ Vercel panelinde proje ayarlarından `Settings > Environment Variables` bölüm�
 | `RESEND_API_KEY` | Gerçek mail için zorunlu | İletişim formunun e-posta göndermesi için Resend API anahtarı. |
 | `CONTACT_EMAIL` | Önerilir | Form mesajlarının gideceği adres. |
 | `CONTACT_FROM_EMAIL` | Önerilir | Resend'de doğrulanmış gönderici adresi. Yazılmazsa `CONTACT_EMAIL` kullanılır. |
-| `ADMIN_PASSWORD_HASH` | Admin modülü varsa zorunlu | Bu kod tabanında şu an admin paneli yoktur; eklendiğinde düz şifre yerine hash saklanmalıdır. |
-| `SESSION_SECRET` | Admin modülü varsa zorunlu | Admin oturumu imzalamak için uzun ve rastgele gizli değer. |
+
+Admin girişi Supabase Auth e-posta/şifre akışıyla yapılır. Ayrı admin kullanıcı adı, şifre hash'i veya oturum sırrı değişkeni kullanılmaz.
 
 Değerleri Production, Preview ve Development ortamları için ayrı ayrı tanımlayabilirsiniz. Gizli değerleri kod deposuna eklemeyin.
 
