@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { FileText, LayoutDashboard, UploadCloud } from "lucide-react";
+import { FileText, LayoutDashboard, Mail, UploadCloud } from "lucide-react";
 import { LogoutButton } from "@/components/admin/logout-button";
 
 export const metadata: Metadata = {
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 const adminNavigation = [
   { href: "/admin", label: "Panel", icon: LayoutDashboard },
   { href: "/admin/makaleler", label: "Makaleler", icon: FileText },
+  { href: "/admin/mesajlar", label: "Mesajlar", icon: Mail },
   { href: "/admin/yuklemeler", label: "Yüklemeler", icon: UploadCloud }
 ];
 

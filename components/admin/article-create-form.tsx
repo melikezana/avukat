@@ -1,25 +1,31 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { Save } from "lucide-react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createArticleAction,
+  updateArticleAction,
   type ArticleFormFields,
   type ArticleFormState
-} from "@/app/admin/makaleler/yeni/actions";
+} from "@/app/admin/makaleler/actions";
+import { slugifyTurkish } from "@/lib/categories";
 
-const initialState: ArticleFormState = {
-  message: "",
-  fields: {
-    status: "draft"
-  }
+const emptyFields: ArticleFormFields = {
+  title: "",
+  slug: "",
+  excerpt: "",
+  content: "",
+  category: "",
+  status: "draft",
+  cover_image_url: ""
 };
 
 function getFieldError(state: ArticleFormState, field: keyof ArticleFormFields) {
   return state.errors?.[field]?.[0];
 }
 
-function SubmitButton() {
+function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   const { pending } = useFormStatus();
 
   return (
@@ -29,7 +35,7 @@ function SubmitButton() {
       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[6px] bg-[var(--color-navy)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-deep)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
     >
       <Save className="h-4 w-4" aria-hidden />
-      {pending ? "Kaydediliyor" : "Kaydet"}
+      {pending ? "Kaydediliyor" : mode === "edit" ? "Güncelle" : "Kaydet"}
     </button>
   );
 }
@@ -56,8 +62,37 @@ const inputClassName =
 
 const labelClassName = "text-sm font-semibold text-[var(--color-navy)]";
 
-export function ArticleCreateForm() {
-  const [state, formAction] = useFormState(createArticleAction, initialState);
+type ArticleCreateFormProps =
+  | {
+      mode?: "create";
+      articleId?: never;
+      initialFields?: Partial<ArticleFormFields>;
+    }
+  | {
+      mode: "edit";
+      articleId: string;
+      initialFields: ArticleFormFields;
+    };
+
+export function ArticleCreateForm({ mode = "create", articleId, initialFields }: ArticleCreateFormProps) {
+  const initialState = useMemo<ArticleFormState>(
+    () => ({
+      message: "",
+      fields: {
+        ...emptyFields,
+        ...initialFields
+      }
+    }),
+    [initialFields]
+  );
+  const action = useMemo(
+    () => (mode === "edit" && articleId ? updateArticleAction.bind(null, articleId) : createArticleAction),
+    [articleId, mode]
+  );
+  const [state, formAction] = useFormState(action, initialState);
+  const [title, setTitle] = useState(initialState.fields?.title ?? "");
+  const [slug, setSlug] = useState(initialState.fields?.slug ?? "");
+  const [slugEdited, setSlugEdited] = useState(mode === "edit" || Boolean(initialState.fields?.slug));
 
   const titleError = getFieldError(state, "title");
   const slugError = getFieldError(state, "slug");
@@ -66,6 +101,19 @@ export function ArticleCreateForm() {
   const categoryError = getFieldError(state, "category");
   const statusError = getFieldError(state, "status");
   const coverImageError = getFieldError(state, "cover_image_url");
+
+  function handleTitleChange(value: string) {
+    setTitle(value);
+
+    if (!slugEdited) {
+      setSlug(slugifyTurkish(value));
+    }
+  }
+
+  function handleSlugChange(value: string) {
+    setSlugEdited(true);
+    setSlug(slugifyTurkish(value));
+  }
 
   return (
     <form
@@ -88,7 +136,8 @@ export function ArticleCreateForm() {
             name="title"
             type="text"
             required
-            defaultValue={state.fields?.title ?? ""}
+            value={title}
+            onChange={(event) => handleTitleChange(event.target.value)}
             aria-invalid={Boolean(titleError)}
             aria-describedby={titleError ? "article-title-error" : undefined}
             className={inputClassName}
@@ -104,7 +153,8 @@ export function ArticleCreateForm() {
             id="article-slug"
             name="slug"
             type="text"
-            defaultValue={state.fields?.slug ?? ""}
+            value={slug}
+            onChange={(event) => handleSlugChange(event.target.value)}
             aria-invalid={Boolean(slugError)}
             aria-describedby={slugError ? "article-slug-error" : undefined}
             className={inputClassName}
@@ -198,7 +248,7 @@ export function ArticleCreateForm() {
       </div>
 
       <div className="mt-6 flex justify-end">
-        <SubmitButton />
+        <SubmitButton mode={mode} />
       </div>
     </form>
   );

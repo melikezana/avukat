@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PencilLine } from "lucide-react";
+import { ArticleDeleteButton } from "@/components/admin/article-delete-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -22,14 +24,15 @@ type AdminArticleRow = {
 type AdminArticlesPageProps = {
   searchParams?: {
     created?: string;
+    updated?: string;
     status?: string;
   };
 };
 
 const filters: Array<{ href: string; label: string; value: ArticleStatus | null }> = [
   { href: "/admin/makaleler", label: "Tümü", value: null },
-  { href: "/admin/makaleler?status=published", label: "Yayımlanmış", value: "published" },
-  { href: "/admin/makaleler?status=draft", label: "Taslak", value: "draft" }
+  { href: "/admin/makaleler?status=draft", label: "Taslak", value: "draft" },
+  { href: "/admin/makaleler?status=published", label: "Yayında", value: "published" }
 ];
 
 function getActiveStatus(status?: string): ArticleStatus | null {
@@ -51,7 +54,7 @@ function getFilterClass(isActive: boolean) {
 
 function formatStatus(status: string | null) {
   if (status === "published") {
-    return "Yayımlanmış";
+    return "Yayında";
   }
 
   if (status === "draft") {
@@ -144,6 +147,10 @@ export default async function AdminArticlesPage({ searchParams }: AdminArticlesP
         <div className="mb-5 rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           Makale kaydedildi.
         </div>
+      ) : searchParams?.updated === "1" ? (
+        <div className="mb-5 rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Makale güncellendi.
+        </div>
       ) : null}
 
       <div className="mb-4 flex flex-wrap gap-2" aria-label="Makale durum filtreleri">
@@ -182,11 +189,17 @@ export default async function AdminArticlesPage({ searchParams }: AdminArticlesP
                     <th scope="col" className="px-4 py-3">
                       Oluşturulma Tarihi
                     </th>
+                    <th scope="col" className="px-4 py-3">
+                      Düzenle
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Sil
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#eadcc5]">
                   {articles.map((article) => (
-                    <tr key={article.id ?? article.slug} className="bg-[#fffaf0]">
+                    <tr key={article.id ?? article.slug} className="bg-[#fffaf0] align-top">
                       <td className="min-w-[260px] px-4 py-4 font-semibold text-[var(--color-navy)]">
                         {article.title || "Başlıksız makale"}
                       </td>
@@ -199,6 +212,21 @@ export default async function AdminArticlesPage({ searchParams }: AdminArticlesP
                         </span>
                       </td>
                       <td className="min-w-[190px] px-4 py-4 text-[#5f5a52]">{formatDateTime(article.created_at)}</td>
+                      <td className="min-w-[120px] px-4 py-4">
+                        <Link
+                          href={`/admin/makaleler/${article.id}/duzenle`}
+                          className="inline-flex min-h-9 items-center justify-center gap-2 rounded-[6px] border border-[#d8c7a8] bg-white px-3 py-2 text-xs font-bold text-[var(--color-navy)] transition hover:border-[#c8a45d] hover:text-[var(--color-gold)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
+                        >
+                          <PencilLine className="h-3.5 w-3.5" aria-hidden />
+                          Düzenle
+                        </Link>
+                      </td>
+                      <td className="min-w-[120px] px-4 py-4">
+                        <ArticleDeleteButton
+                          articleId={String(article.id)}
+                          articleTitle={article.title || "Başlıksız makale"}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
