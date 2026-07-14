@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { routeErrorResponse, validationErrorResponse } from "@/lib/api/responses";
+import { validationErrorResponse } from "@/lib/api/responses";
 import { adminUnauthorizedResponse } from "@/lib/admin/request";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -30,9 +30,10 @@ const uploadSchema = z.object({
 });
 
 type StorageUploadError = {
+  error?: string;
   message?: string;
   status?: number;
-  statusCode?: string;
+  statusCode?: number | string;
 };
 
 function createStoragePath(fileType: string) {
@@ -42,26 +43,65 @@ function createStoragePath(fileType: string) {
 
 function getStorageErrorStatus(error: StorageUploadError) {
   const parsedStatus = Number(error.statusCode ?? error.status);
-  return Number.isInteger(parsedStatus) && parsedStatus >= 400 && parsedStatus < 500 ? parsedStatus : 500;
+  return Number.isInteger(parsedStatus) && parsedStatus >= 400 && parsedStatus < 600 ? parsedStatus : 500;
 }
 
-function getStorageErrorMessage(error: StorageUploadError) {
-  const status = getStorageErrorStatus(error);
-  const message = error.message?.toLocaleLowerCase("tr-TR") ?? "";
+function getStorageErrorMessage(error: StorageUploadError, fallbackMessage = "Supabase Storage hatası alındı.") {
+  return error.message || error.error || fallbackMessage;
+}
 
-  if (status === 401 || status === 403 || message.includes("policy") || message.includes("unauthorized")) {
-    return "Görsel yükleme yetkisi doğrulanamadı. Lütfen oturumunuzu yenileyip tekrar deneyin.";
+function logStorageError(scope: string, error: StorageUploadError, extra?: Record<string, unknown>) {
+  console.error(`[admin.upload.storage.${scope}]`, {
+    ...extra,
+    status: error.status,
+    statusCode: error.statusCode,
+    error: error.error,
+    message: error.message
+  });
+}
+
+async function ensureArticleImageBucket(storageSupabase: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data: bucket, error } = await storageSupabase.storage.getBucket(articleImageBucket);
+
+  if (error) {
+    logStorageError("bucket", error, { bucket: articleImageBucket });
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message: getStorageErrorMessage(error, `${articleImageBucket} bucket erişimi doğrulanamadı.`)
+      },
+      { status: getStorageErrorStatus(error) }
+    );
   }
 
-  if (status === 404) {
-    return "article-images depolama alanı bulunamadı. Lütfen Supabase Storage ayarlarını kontrol edin.";
+  if (!bucket) {
+    const message = `${articleImageBucket} bucket bulunamadı.`;
+    console.error("[admin.upload.storage.bucket]", { bucket: articleImageBucket, message });
+
+    return NextResponse.json({ ok: false, message }, { status: 404 });
   }
 
-  if (status === 409) {
-    return "Bu görsel adı zaten kullanılıyor. Lütfen tekrar deneyin.";
+  if (!bucket.public) {
+    const message = `${articleImageBucket} bucket public değil. Public URL kullanımı için bucket public olmalı.`;
+    console.error("[admin.upload.storage.bucket]", {
+      bucket: articleImageBucket,
+      public: bucket.public,
+      message
+    });
+
+    return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 
-  return "Görsel şu anda yüklenemiyor. Lütfen daha sonra tekrar deneyin.";
+  return null;
+}
+
+function getUnexpectedUploadErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Upload sırasında bilinmeyen hata oluştu.";
 }
 
 export async function POST(request: Request) {
@@ -87,6 +127,12 @@ export async function POST(request: Request) {
     }
 
     const storageSupabase = createSupabaseAdminClient();
+    const bucketErrorResponse = await ensureArticleImageBucket(storageSupabase);
+
+    if (bucketErrorResponse) {
+      return bucketErrorResponse;
+    }
+
     const storagePath = createStoragePath(parsed.data.file.type);
     const storageFileName = storagePath.split("/").pop() ?? storagePath;
     const fileBuffer = Buffer.from(await parsed.data.file.arrayBuffer());
@@ -97,10 +143,11 @@ export async function POST(request: Request) {
     });
 
     if (uploadError) {
-      console.error("[admin.upload.storage]", {
-        status: uploadError.status,
-        statusCode: uploadError.statusCode,
-        message: uploadError.message
+      logStorageError("upload", uploadError, {
+        bucket: articleImageBucket,
+        path: storagePath,
+        contentType: parsed.data.file.type,
+        size: parsed.data.file.size
       });
 
       return NextResponse.json(
@@ -130,6 +177,14 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    return routeErrorResponse(error, "admin.upload");
+    console.error("[admin.upload.unexpected]", error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message: getUnexpectedUploadErrorMessage(error)
+      },
+      { status: 500 }
+    );
   }
 }

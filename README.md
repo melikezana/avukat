@@ -21,6 +21,7 @@ Yerel geliştirme için `.env.local` dosyasına şu alanları ekleyin:
 NEXT_PUBLIC_SUPABASE_URL="https://your-project-ref.supabase.co"
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sb_publishable_xxxxxxxxxxxxxxxxxxxxx"
 SUPABASE_SERVICE_ROLE_KEY="sb_secret_or_service_role_xxxxxxxxxxxxxxxxxxxxx"
+SUPABASE_SECRET_KEY="sb_secret_xxxxxxxxxxxxxxxxxxxxx"
 ```
 
 Bu değerler eksikse Supabase client oluşturulurken hangi environment variable'ın eksik olduğunu belirten açıklayıcı bir hata üretilir. Örnek değerler için `.env.example` dosyasını kullanın; gerçek anahtarları GitHub'a eklemeyin.
@@ -116,6 +117,7 @@ Vercel panelinde proje ayarlarından `Settings > Environment Variables` bölüm�
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase kullanımı için zorunlu | Supabase proje URL'i. Örnek: `https://your-project-ref.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase kullanımı için zorunlu | Supabase publishable key değeri. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin görsel yükleme için zorunlu | Sunucu tarafında, yönetici oturumu doğrulandıktan sonra `article-images` Storage bucket'ına yazmak için kullanılan gizli Supabase anahtarı. Client'a gönderilmez. |
+| `SUPABASE_SECRET_KEY` | Alternatif admin anahtarı | `SUPABASE_SERVICE_ROLE_KEY` yoksa upload route'u bu değeri kullanır. Client'a gönderilmez. |
 | `RESEND_API_KEY` | Gerçek mail için zorunlu | İletişim formunun e-posta göndermesi için Resend API anahtarı. |
 | `CONTACT_EMAIL` | Önerilir | Form mesajlarının gideceği adres. |
 | `CONTACT_FROM_EMAIL` | Önerilir | Resend'de doğrulanmış gönderici adresi. Yazılmazsa `CONTACT_EMAIL` kullanılır. |
