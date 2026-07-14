@@ -158,6 +158,7 @@ export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange
     };
 
     request.open("POST", "/api/admin/upload");
+    request.withCredentials = true;
     request.send(formData);
   }
 

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { routeErrorResponse, validationErrorResponse } from "@/lib/api/responses";
 import { adminUnauthorizedResponse } from "@/lib/admin/request";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -85,10 +86,11 @@ export async function POST(request: Request) {
       return validationErrorResponse(parsed.error);
     }
 
+    const storageSupabase = createSupabaseAdminClient();
     const storagePath = createStoragePath(parsed.data.file.type);
     const storageFileName = storagePath.split("/").pop() ?? storagePath;
     const fileBuffer = Buffer.from(await parsed.data.file.arrayBuffer());
-    const { error: uploadError } = await supabase.storage.from(articleImageBucket).upload(storagePath, fileBuffer, {
+    const { error: uploadError } = await storageSupabase.storage.from(articleImageBucket).upload(storagePath, fileBuffer, {
       cacheControl: "31536000",
       contentType: parsed.data.file.type,
       upsert: false
@@ -112,7 +114,7 @@ export async function POST(request: Request) {
 
     const {
       data: { publicUrl }
-    } = supabase.storage.from(articleImageBucket).getPublicUrl(storagePath);
+    } = storageSupabase.storage.from(articleImageBucket).getPublicUrl(storagePath);
 
     return NextResponse.json(
       {
