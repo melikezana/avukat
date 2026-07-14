@@ -64,6 +64,7 @@ export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   function setUploadingState(nextState: boolean) {
     setIsUploading(nextState);
@@ -104,6 +105,7 @@ export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("folder", "article-covers");
 
     if (title.trim()) {
       formData.append("title", title.trim());
@@ -170,6 +172,26 @@ export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange
     }
   }
 
+  function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
+    if (event.dataTransfer.types.includes("Files")) {
+      event.preventDefault();
+      setIsDragging(true);
+    }
+  }
+
+  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    const file = event.dataTransfer.files?.[0];
+
+    if (!file || !file.type.startsWith("image/")) {
+      setIsDragging(false);
+      return;
+    }
+
+    event.preventDefault();
+    setIsDragging(false);
+    uploadFile(file);
+  }
+
   function handleRemove() {
     onChange("");
     setMessage("Kapak görseli kaldırıldı. Kaydettiğinizde makaleden silinir.");
@@ -179,7 +201,15 @@ export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange
   }
 
   return (
-    <div className="mt-2 rounded-[8px] border border-[#d8c7a8] bg-white p-4">
+    <div
+      className={cn(
+        "mt-2 rounded-[8px] border bg-white p-4 transition",
+        isDragging ? "border-[var(--color-gold)] ring-2 ring-[var(--color-gold)]/30" : "border-[#d8c7a8]"
+      )}
+      onDragOver={handleDragOver}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={handleDrop}
+    >
       <div className="grid gap-4 sm:grid-cols-[150px_minmax(0,1fr)]">
         <div className="relative aspect-[16/10] overflow-hidden rounded-[6px] border border-[#eadcc5] bg-[#f8efe0]">
           {value ? (
@@ -236,7 +266,7 @@ export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange
           </div>
 
           <p className="mt-3 text-sm leading-6 text-[#6c6254]">
-            JPG, PNG veya WebP yükleyin. Dosya boyutu en fazla 5 MB olabilir.
+            JPG, PNG veya WebP yükleyin ya da dosyayı bu alana bırakın. Dosya boyutu en fazla 5 MB olabilir.
           </p>
 
           {isUploading ? (

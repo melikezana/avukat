@@ -26,6 +26,18 @@ SUPABASE_SECRET_KEY="sb_secret_xxxxxxxxxxxxxxxxxxxxx"
 
 Bu değerler eksikse Supabase client oluşturulurken hangi environment variable'ın eksik olduğunu belirten açıklayıcı bir hata üretilir. Örnek değerler için `.env.example` dosyasını kullanın; gerçek anahtarları GitHub'a eklemeyin.
 
+### Makale CMS migration
+
+Admin makale yönetimi Supabase `public.articles` tablosunu ve `article-images` Storage bucket'ını kullanır. SEO alanları ve içerik görseli klasörü için aşağıdaki SQL dosyasını Supabase panelindeki SQL Editor'da manuel olarak çalıştırın:
+
+```text
+supabase/migrations/20260714223000_add_article_cms_seo_fields.sql
+```
+
+Bu dosya otomatik çalıştırılmadı. Migration `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` ile şu alanları ekler: `seo_title`, `seo_description`, `canonical_url`, `og_image_url`, `focus_keyword`, `author_name`. Ayrıca `article-images` bucket politikalarında `article-covers/` yanında `article-content/` klasörüne de izin verir.
+
+Makale silme işlemi yalnızca `articles` kaydını siler; kapak görseli veya içerik görselleri Storage üzerinden otomatik kaldırılmaz. Kullanılmayan Storage dosyaları için ileride ayrı, güvenli ve referans kontrolü yapan bir temizlik sistemi kurulmalıdır.
+
 ## Üretim build
 
 ```bash

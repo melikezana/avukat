@@ -30,7 +30,7 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
 
     return articles.filter((article) => {
       const matchesCategory = !activeCategorySlug || slugifyTurkish(article.category) === activeCategorySlug;
-      const searchable = `${article.title} ${article.summary} ${article.category}`.toLocaleLowerCase("tr-TR");
+      const searchable = `${article.title} ${article.slug} ${article.summary} ${article.excerpt} ${article.category}`.toLocaleLowerCase("tr-TR");
       const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
 
       return matchesCategory && matchesQuery;

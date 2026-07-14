@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validationErrorResponse } from "@/lib/api/responses";
 import { adminUnauthorizedResponse } from "@/lib/admin/request";
+import { consumeRateLimit, isSameOriginRequest } from "@/lib/admin/security";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -10,6 +11,7 @@ export const runtime = "nodejs";
 
 const articleImageBucket = "article-images";
 const articleCoverFolder = "article-covers";
+const articleContentFolder = "article-content";
 const maxUploadSizeBytes = 5 * 1024 * 1024;
 const allowedTypes: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -26,7 +28,12 @@ const uploadSchema = z.object({
       (file) => Object.prototype.hasOwnProperty.call(allowedTypes, file.type),
       "Sadece jpg, png veya webp yüklenebilir."
     ),
-  title: z.string().trim().max(120).optional()
+  title: z.string().trim().max(120).optional(),
+  folder: z.enum([articleCoverFolder, articleContentFolder]).default(articleCoverFolder),
+  alt: z.string().trim().max(160).optional()
+}).refine((value) => value.folder !== articleContentFolder || Boolean(value.alt), {
+  message: "İçerik görseli için alt metin zorunludur.",
+  path: ["alt"]
 });
 
 type StorageUploadError = {
@@ -36,9 +43,9 @@ type StorageUploadError = {
   statusCode?: number | string;
 };
 
-function createStoragePath(fileType: string) {
+function createStoragePath(fileType: string, folder: string) {
   const extension = allowedTypes[fileType];
-  return `${articleCoverFolder}/${Date.now()}-${randomUUID()}.${extension}`;
+  return `${folder}/${Date.now()}-${randomUUID()}.${extension}`;
 }
 
 function getStorageErrorStatus(error: StorageUploadError) {
@@ -106,6 +113,16 @@ function getUnexpectedUploadErrorMessage(error: unknown) {
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginRequest(request.headers)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Görsel şu anda yüklenemiyor. Lütfen sayfayı yenileyip tekrar deneyin."
+        },
+        { status: 403 }
+      );
+    }
+
     const supabase = createSupabaseServerClient();
     const {
       data: { user },
@@ -116,10 +133,22 @@ export async function POST(request: Request) {
       return adminUnauthorizedResponse();
     }
 
+    if (!consumeRateLimit(`article-upload:${user.id}`, { limit: 20, windowMs: 60_000 })) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Çok kısa sürede çok fazla görsel yükleme denemesi yapıldı. Lütfen biraz sonra tekrar deneyin."
+        },
+        { status: 429 }
+      );
+    }
+
     const formData = await request.formData();
     const parsed = uploadSchema.safeParse({
       file: formData.get("file"),
-      title: formData.get("title") || undefined
+      title: formData.get("title") || undefined,
+      folder: formData.get("folder") || articleCoverFolder,
+      alt: formData.get("alt") || undefined
     });
 
     if (!parsed.success) {
@@ -133,7 +162,7 @@ export async function POST(request: Request) {
       return bucketErrorResponse;
     }
 
-    const storagePath = createStoragePath(parsed.data.file.type);
+    const storagePath = createStoragePath(parsed.data.file.type, parsed.data.folder);
     const storageFileName = storagePath.split("/").pop() ?? storagePath;
     const fileBuffer = Buffer.from(await parsed.data.file.arrayBuffer());
     const { error: uploadError } = await storageSupabase.storage.from(articleImageBucket).upload(storagePath, fileBuffer, {

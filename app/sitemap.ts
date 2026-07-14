@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
-import { getAllArticles } from "@/lib/articles";
+import { getAllPublicArticleMetas } from "@/lib/public-articles";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.idrisdagkesen.av.tr";
   const routes = ["", "/hakkimda", "/uzmanlik-alanlari", "/makaleler", "/iletisim"].map((route) => ({
     url: `${siteUrl}${route}`,
@@ -10,9 +10,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: route === "" ? 1 : 0.7
   }));
 
-  const articles = getAllArticles().map((article) => ({
+  const articles = (await getAllPublicArticleMetas()).map((article) => ({
     url: `${siteUrl}/makaleler/${article.slug}`,
-    lastModified: new Date(article.date),
+    lastModified: new Date(article.updatedAt || article.date),
     changeFrequency: "weekly" as const,
     priority: 0.8
   }));

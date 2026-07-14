@@ -138,3 +138,49 @@ a {
 .article-prose strong {
   color: #0a1628;
 }
+
+.article-prose a {
+  color: var(--color-gold);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.article-prose img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin: 2rem auto;
+  border: 1px solid rgba(10, 22, 40, 0.1);
+  border-radius: 8px;
+}
+
+.article-prose hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid rgba(10, 22, 40, 0.14);
+}
+
+.article-prose pre {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  background: #0a1628;
+  padding: 1rem;
+  color: #faf7f1;
+}
+
+.article-prose code {
+  border-radius: 4px;
+  background: rgba(10, 22, 40, 0.08);
+  padding: 0.15rem 0.35rem;
+  color: #0a1628;
+  font-size: 0.92em;
+}
+
+.article-prose pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}

@@ -28,6 +28,12 @@ type ArticleRow = {
   category: string | null;
   cover_image_url: string | null;
   status: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  canonical_url?: string | null;
+  og_image_url?: string | null;
+  focus_keyword?: string | null;
+  author_name?: string | null;
 };
 
 function normalizeStatus(status: string | null): ArticleStatus {
@@ -42,7 +48,13 @@ function toFormFields(article: ArticleRow): ArticleFormFields {
     content: article.content ?? "",
     category: normalizeArticleCategory(article.category),
     cover_image_url: article.cover_image_url ?? "",
-    status: normalizeStatus(article.status)
+    status: normalizeStatus(article.status),
+    seo_title: article.seo_title ?? "",
+    seo_description: article.seo_description ?? "",
+    canonical_url: article.canonical_url ?? "",
+    og_image_url: article.og_image_url ?? "",
+    focus_keyword: article.focus_keyword ?? "",
+    author_name: article.author_name ?? ""
   };
 }
 
@@ -59,7 +71,7 @@ async function getArticle(id: string) {
 
   const { data, error } = await supabase
     .from("articles")
-    .select("id,title,slug,excerpt,content,category,cover_image_url,status")
+    .select("*")
     .eq("id", id)
     .single();
 

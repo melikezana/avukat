@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import readingTime from "reading-time";
+import { ARTICLE_CATEGORY_OPTIONS } from "@/lib/article-categories";
+import { defaultArticleAuthor } from "@/lib/article-defaults";
 
 const articlesDirectory = path.join(process.cwd(), "content", "articles");
 
@@ -42,15 +44,7 @@ type ArticleRecord = Article & {
   sourceSlug: string;
 };
 
-const defaultAuthor = "Av. İdris Dağkesen";
-const priorityFilterCategories = [
-  "Kira Hukuku",
-  "İş Hukuku",
-  "Aile Hukuku",
-  "Ceza Hukuku",
-  "Ticaret Hukuku",
-  "Gayrimenkul Hukuku"
-];
+const priorityFilterCategories = ARTICLE_CATEGORY_OPTIONS.map((category) => category.label);
 
 function estimateReadingTime(content: string) {
   return Math.max(1, Math.ceil(readingTime(content).minutes));
@@ -119,7 +113,7 @@ function readArticleRecord(fileName: string): ArticleRecord {
     coverImage,
     coverImageExists: publicAssetExists(coverImage),
     readingTime: parseReadingTime(frontmatter.readingTime, content),
-    author: frontmatter.author?.trim() || defaultAuthor,
+    author: frontmatter.author?.trim() || defaultArticleAuthor,
     metaTitle: frontmatter.metaTitle,
     metaDescription: frontmatter.metaDescription ?? excerpt,
     content

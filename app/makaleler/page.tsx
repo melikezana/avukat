@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { ArticleFilters } from "@/components/articles/article-filters";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/ui/page-header";
-import { getAllArticles, getArticleCategories } from "@/lib/articles";
+import { getAllPublicArticleMetas, getPublicArticleCategories } from "@/lib/public-articles";
 
 export const metadata: Metadata = {
   title: "Makaleler",
@@ -11,9 +11,11 @@ export const metadata: Metadata = {
     "Av. İdris Dağkesen'in anlaşılır hukuk yazıları kategori filtresi ve arama deneyimiyle listelenir."
 };
 
-export default function ArticlesPage() {
-  const articles = getAllArticles();
-  const categories = getArticleCategories(articles);
+export const dynamic = "force-dynamic";
+
+export default async function ArticlesPage() {
+  const articles = await getAllPublicArticleMetas();
+  const categories = getPublicArticleCategories(articles);
 
   return (
     <>
