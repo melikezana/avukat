@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Save } from "lucide-react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
@@ -9,6 +9,7 @@ import {
   type ArticleFormFields,
   type ArticleFormState
 } from "@/app/admin/makaleler/actions";
+import { ArticleCoverUpload } from "@/components/admin/article-cover-upload";
 import { slugifyTurkish } from "@/lib/categories";
 
 const emptyFields: ArticleFormFields = {
@@ -25,17 +26,18 @@ function getFieldError(state: ArticleFormState, field: keyof ArticleFormFields) 
   return state.errors?.[field]?.[0];
 }
 
-function SubmitButton({ mode }: { mode: "create" | "edit" }) {
+function SubmitButton({ mode, disabled }: { mode: "create" | "edit"; disabled?: boolean }) {
   const { pending } = useFormStatus();
+  const isDisabled = pending || disabled;
 
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={isDisabled}
       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[6px] bg-[var(--color-navy)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-navy-deep)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
     >
       <Save className="h-4 w-4" aria-hidden />
-      {pending ? "Kaydediliyor" : mode === "edit" ? "Güncelle" : "Kaydet"}
+      {pending ? "Kaydediliyor" : disabled ? "Görsel yükleniyor" : mode === "edit" ? "Güncelle" : "Kaydet"}
     </button>
   );
 }
@@ -93,6 +95,8 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
   const [title, setTitle] = useState(initialState.fields?.title ?? "");
   const [slug, setSlug] = useState(initialState.fields?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(mode === "edit" || Boolean(initialState.fields?.slug));
+  const [coverImageUrl, setCoverImageUrl] = useState(initialState.fields?.cover_image_url ?? "");
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
 
   const titleError = getFieldError(state, "title");
   const slugError = getFieldError(state, "slug");
@@ -101,6 +105,10 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
   const categoryError = getFieldError(state, "category");
   const statusError = getFieldError(state, "status");
   const coverImageError = getFieldError(state, "cover_image_url");
+
+  useEffect(() => {
+    setCoverImageUrl(state.fields?.cover_image_url ?? "");
+  }, [state.fields?.cover_image_url]);
 
   function handleTitleChange(value: string) {
     setTitle(value);
@@ -215,14 +223,25 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
       </div>
 
       <div className="mt-5">
+        <p className={labelClassName}>Kapak Görseli Yükle</p>
+        <ArticleCoverUpload
+          value={coverImageUrl}
+          title={title}
+          onChange={setCoverImageUrl}
+          onUploadStateChange={setIsCoverUploading}
+        />
+      </div>
+
+      <div className="mt-5">
         <label htmlFor="article-cover-image" className={labelClassName}>
-          Kapak Görseli URL
+          Kapak Görseli URL (yedek seçenek)
         </label>
         <input
           id="article-cover-image"
           name="cover_image_url"
           type="text"
-          defaultValue={state.fields?.cover_image_url ?? ""}
+          value={coverImageUrl}
+          onChange={(event) => setCoverImageUrl(event.target.value)}
           aria-invalid={Boolean(coverImageError)}
           aria-describedby={coverImageError ? "article-cover-image-error" : undefined}
           className={inputClassName}
@@ -248,7 +267,7 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
       </div>
 
       <div className="mt-6 flex justify-end">
-        <SubmitButton mode={mode} />
+        <SubmitButton mode={mode} disabled={isCoverUploading} />
       </div>
     </form>
   );

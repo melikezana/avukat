@@ -100,7 +100,7 @@ export default function ArticlePage({ params }: ArticlePageProps) {
               category={article.category}
               width={1200}
               height={675}
-              sizes="(min-width: 768px) 768px, 100vw"
+              sizes="(min-width: 1024px) 896px, (min-width: 768px) calc(100vw - 4rem), 100vw"
             />
           </div>
         </div>

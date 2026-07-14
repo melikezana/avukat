@@ -13,6 +13,19 @@ type ArticleCoverProps = {
   imageClassName?: string;
 };
 
+function isRemoteImage(src: string) {
+  return /^https?:\/\//i.test(src);
+}
+
+function isSupabaseArticleImage(src: string) {
+  try {
+    const url = new URL(src);
+    return url.pathname.startsWith("/storage/v1/object/public/article-images/");
+  } catch {
+    return false;
+  }
+}
+
 export function ArticleCover({
   src,
   title,
@@ -33,6 +46,7 @@ export function ArticleCover({
         width={width}
         height={height}
         sizes={sizes}
+        unoptimized={isRemoteImage(src) && !isSupabaseArticleImage(src)}
         className={cn(baseClassName, "object-cover", imageClassName)}
       />
     );

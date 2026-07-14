@@ -17,7 +17,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
             src={article.coverImageExists ? article.coverImage : undefined}
             title={article.title}
             category={article.category}
-            sizes="(min-width: 1024px) 31vw, (min-width: 768px) 48vw, 100vw"
+            sizes="(min-width: 1280px) 360px, (min-width: 1024px) 31vw, (min-width: 768px) 48vw, 100vw"
             imageClassName="transition duration-500 group-hover:scale-[1.03]"
           />
         </div>
