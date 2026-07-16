@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import readingTime from "reading-time";
 import { ARTICLE_CATEGORY_OPTIONS } from "@/lib/article-categories";
 import { defaultArticleAuthor } from "@/lib/article-defaults";
+import { estimateReadingMinutesFromText } from "@/lib/article-reading-time";
 
 const articlesDirectory = path.join(process.cwd(), "content", "articles");
 
@@ -47,7 +47,7 @@ type ArticleRecord = Article & {
 const priorityFilterCategories = ARTICLE_CATEGORY_OPTIONS.map((category) => category.label);
 
 function estimateReadingTime(content: string) {
-  return Math.max(1, Math.ceil(readingTime(content).minutes));
+  return estimateReadingMinutesFromText(content);
 }
 
 function listArticleFiles() {

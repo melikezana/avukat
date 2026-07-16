@@ -11,6 +11,7 @@ import {
   type ArticleStatus
 } from "@/app/admin/makaleler/actions";
 import { ArticleCoverUpload } from "@/components/admin/article-cover-upload";
+import { ArticlePdfUpload } from "@/components/admin/article-pdf-upload";
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
 import { ARTICLE_CATEGORY_OPTIONS, getArticleCategoryLabel, normalizeArticleCategory } from "@/lib/article-categories";
 import { defaultArticleAuthor } from "@/lib/article-defaults";
@@ -30,7 +31,13 @@ const emptyFields: ArticleFormFields = {
   canonical_url: "",
   og_image_url: "",
   focus_keyword: "",
-  author_name: defaultArticleAuthor
+  author_name: defaultArticleAuthor,
+  decision_pdf_url: "",
+  decision_pdf_title: "",
+  decision_court: "",
+  decision_case_no: "",
+  decision_number: "",
+  decision_date: ""
 };
 
 const inputClassName =
@@ -130,7 +137,7 @@ function SubmitButton({ intent, disabled, mode }: SubmitButtonProps) {
       )}
     >
       <Icon className="h-4 w-4" aria-hidden />
-      {disabled ? "Görsel yükleniyor" : label}
+      {disabled ? "Yükleme sürüyor" : label}
     </button>
   );
 }
@@ -213,10 +220,11 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
   const [slugEdited, setSlugEdited] = useState(mode === "edit" || Boolean(initialFields?.slug));
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const [isContentUploading, setIsContentUploading] = useState(false);
+  const [isPdfUploading, setIsPdfUploading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const isUploading = isCoverUploading || isContentUploading;
+  const isUploading = isCoverUploading || isContentUploading || isPdfUploading;
 
   useEffect(() => {
     if (state.fields) {
@@ -277,6 +285,12 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
   const ogImageUrlError = getFieldError(state, "og_image_url");
   const focusKeywordError = getFieldError(state, "focus_keyword");
   const authorNameError = getFieldError(state, "author_name");
+  const decisionPdfUrlError = getFieldError(state, "decision_pdf_url");
+  const decisionPdfTitleError = getFieldError(state, "decision_pdf_title");
+  const decisionCourtError = getFieldError(state, "decision_court");
+  const decisionCaseNoError = getFieldError(state, "decision_case_no");
+  const decisionNumberError = getFieldError(state, "decision_number");
+  const decisionDateError = getFieldError(state, "decision_date");
 
   return (
     <>
@@ -442,6 +456,131 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
           />
           <FieldError id="article-content-error" message={contentError} />
         </div>
+
+        <details className="mt-8 rounded-[8px] border border-[#d8c7a8] bg-white" open>
+          <summary className="cursor-pointer px-4 py-3 font-display text-lg font-bold text-[var(--color-navy)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]">
+            Karar Bilgileri
+          </summary>
+          <div className="grid gap-5 border-t border-[#eadcc5] p-4 lg:grid-cols-2">
+            <div className="lg:col-span-2">
+              <label htmlFor="article-decision-court" className={labelClassName}>
+                Mahkeme
+              </label>
+              <input
+                id="article-decision-court"
+                name="decision_court"
+                type="text"
+                value={fields.decision_court}
+                onChange={(event) => updateField("decision_court", event.target.value)}
+                aria-invalid={Boolean(decisionCourtError)}
+                aria-describedby={decisionCourtError ? "article-decision-court-error" : undefined}
+                className={inputClassName}
+              />
+              <FieldError id="article-decision-court-error" message={decisionCourtError} />
+            </div>
+
+            <div>
+              <label htmlFor="article-decision-case-no" className={labelClassName}>
+                Esas no
+              </label>
+              <input
+                id="article-decision-case-no"
+                name="decision_case_no"
+                type="text"
+                value={fields.decision_case_no}
+                onChange={(event) => updateField("decision_case_no", event.target.value)}
+                aria-invalid={Boolean(decisionCaseNoError)}
+                aria-describedby={decisionCaseNoError ? "article-decision-case-no-error" : undefined}
+                className={inputClassName}
+              />
+              <FieldError id="article-decision-case-no-error" message={decisionCaseNoError} />
+            </div>
+
+            <div>
+              <label htmlFor="article-decision-number" className={labelClassName}>
+                Karar no
+              </label>
+              <input
+                id="article-decision-number"
+                name="decision_number"
+                type="text"
+                value={fields.decision_number}
+                onChange={(event) => updateField("decision_number", event.target.value)}
+                aria-invalid={Boolean(decisionNumberError)}
+                aria-describedby={decisionNumberError ? "article-decision-number-error" : undefined}
+                className={inputClassName}
+              />
+              <FieldError id="article-decision-number-error" message={decisionNumberError} />
+            </div>
+
+            <div>
+              <label htmlFor="article-decision-date" className={labelClassName}>
+                Karar tarihi
+              </label>
+              <input
+                id="article-decision-date"
+                name="decision_date"
+                type="date"
+                value={fields.decision_date}
+                onChange={(event) => updateField("decision_date", event.target.value)}
+                aria-invalid={Boolean(decisionDateError)}
+                aria-describedby={decisionDateError ? "article-decision-date-error" : undefined}
+                className={inputClassName}
+              />
+              <FieldError id="article-decision-date-error" message={decisionDateError} />
+            </div>
+          </div>
+        </details>
+
+        <details className="mt-5 rounded-[8px] border border-[#d8c7a8] bg-white">
+          <summary className="cursor-pointer px-4 py-3 font-display text-lg font-bold text-[var(--color-navy)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]">
+            Karar PDF’i
+          </summary>
+          <div className="space-y-5 border-t border-[#eadcc5] p-4">
+            <div>
+              <label htmlFor="article-decision-pdf-title" className={labelClassName}>
+                PDF başlığı
+              </label>
+              <input
+                id="article-decision-pdf-title"
+                name="decision_pdf_title"
+                type="text"
+                value={fields.decision_pdf_title}
+                onChange={(event) => updateField("decision_pdf_title", event.target.value)}
+                aria-invalid={Boolean(decisionPdfTitleError)}
+                aria-describedby={decisionPdfTitleError ? "article-decision-pdf-title-error" : undefined}
+                className={inputClassName}
+              />
+              <FieldError id="article-decision-pdf-title-error" message={decisionPdfTitleError} />
+            </div>
+
+            <div>
+              <label htmlFor="article-decision-pdf-url" className={labelClassName}>
+                PDF URL
+              </label>
+              <input
+                id="article-decision-pdf-url"
+                name="decision_pdf_url"
+                type="url"
+                value={fields.decision_pdf_url}
+                onChange={(event) => updateField("decision_pdf_url", event.target.value)}
+                aria-invalid={Boolean(decisionPdfUrlError)}
+                aria-describedby={decisionPdfUrlError ? "article-decision-pdf-url-error" : undefined}
+                className={inputClassName}
+              />
+              <FieldError id="article-decision-pdf-url-error" message={decisionPdfUrlError} />
+            </div>
+
+            <div>
+              <p className={labelClassName}>PDF dosyası yükleme</p>
+              <ArticlePdfUpload
+                value={fields.decision_pdf_url}
+                onChange={(value) => updateField("decision_pdf_url", value)}
+                onUploadStateChange={setIsPdfUploading}
+              />
+            </div>
+          </div>
+        </details>
 
         <section className="mt-8 border-t border-[#d8c7a8] pt-6" aria-labelledby="seo-settings-title">
           <h3 id="seo-settings-title" className="font-display text-xl font-bold text-[var(--color-navy)]">

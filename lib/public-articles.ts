@@ -23,6 +23,12 @@ export type PublicArticleMeta = ArticleMeta & {
   canonicalUrl?: string;
   ogImage?: string;
   focusKeyword?: string;
+  decisionPdfUrl?: string;
+  decisionPdfTitle?: string;
+  decisionCourt?: string;
+  decisionCaseNo?: string;
+  decisionNumber?: string;
+  decisionDate?: string;
 };
 
 export type ArticleSummary = PublicArticleMeta;
@@ -50,6 +56,12 @@ type SupabaseArticleRow = {
   og_image_url?: string | null;
   focus_keyword?: string | null;
   author_name?: string | null;
+  decision_pdf_url?: string | null;
+  decision_pdf_title?: string | null;
+  decision_court?: string | null;
+  decision_case_no?: string | null;
+  decision_number?: string | null;
+  decision_date?: string | null;
 };
 
 type SupabaseArticleStatusRow = {
@@ -58,8 +70,10 @@ type SupabaseArticleStatusRow = {
   status?: string | null;
 };
 
-const publicArticleSelect =
+const basePublicArticleSelect =
   "id,title,slug,excerpt,content,category,cover_image_url,status,published_at,created_at,updated_at,seo_title,seo_description,canonical_url,og_image_url,focus_keyword,author_name";
+const publicArticleSelect =
+  `${basePublicArticleSelect},decision_pdf_url,decision_pdf_title,decision_court,decision_case_no,decision_number,decision_date`;
 
 function trimOptional(value?: string | null) {
   const trimmed = value?.trim();
@@ -128,6 +142,12 @@ function mapSupabaseArticle(row: SupabaseArticleRow): PublicArticle | null {
     canonicalUrl: trimOptional(row.canonical_url),
     ogImage,
     focusKeyword: trimOptional(row.focus_keyword),
+    decisionPdfUrl: trimOptional(row.decision_pdf_url),
+    decisionPdfTitle: trimOptional(row.decision_pdf_title),
+    decisionCourt: trimOptional(row.decision_court),
+    decisionCaseNo: trimOptional(row.decision_case_no),
+    decisionNumber: trimOptional(row.decision_number),
+    decisionDate: trimOptional(row.decision_date),
     publishedAt,
     updatedAt,
     content,
@@ -183,6 +203,11 @@ function logSupabaseError(
   });
 }
 
+function isDecisionColumnMissingError(error: { code?: string; message?: string; details?: string; hint?: string }) {
+  const message = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`;
+  return error.code === "42703" || /decision_(pdf_url|pdf_title|court|case_no|number|date)/i.test(message);
+}
+
 function getSupabaseClientOrNull(label: string, extra?: Record<string, unknown>) {
   try {
     return createSupabasePublicServerClient();
@@ -216,6 +241,21 @@ async function getPublishedSupabaseArticleRows() {
     .order("published_at", { ascending: false, nullsFirst: false });
 
   if (error) {
+    if (isDecisionColumnMissingError(error)) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("articles")
+        .select(basePublicArticleSelect)
+        .eq("status", "published")
+        .order("published_at", { ascending: false, nullsFirst: false });
+
+      if (!fallbackError) {
+        return (fallbackData ?? []) as SupabaseArticleRow[];
+      }
+
+      logSupabaseError("[public.articles.supabase.list.fallback]", fallbackError);
+      return [];
+    }
+
     logSupabaseError("[public.articles.supabase.list]", error);
 
     return [];
@@ -253,6 +293,29 @@ async function getPublishedSupabaseArticleBySlug(slug: string) {
     .maybeSingle();
 
   if (error) {
+    if (isDecisionColumnMissingError(error)) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("articles")
+        .select(basePublicArticleSelect)
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle();
+
+      if (!fallbackError) {
+        return {
+          article: fallbackData ? mapSupabaseArticle(fallbackData as SupabaseArticleRow) : null,
+          error: false
+        };
+      }
+
+      logSupabaseError("[public.articles.supabase.detail.fallback]", fallbackError, { slug });
+
+      return {
+        article: null,
+        error: true
+      };
+    }
+
     logSupabaseError("[public.articles.supabase.detail]", error, { slug });
 
     return {
@@ -336,6 +399,9 @@ export function getPublicArticleCategories(articles: PublicArticleMeta[]) {
 }
 
 export function getRelatedArticles(article: PublicArticleMeta, articles: PublicArticleMeta[], limit = 3) {
-  const sameCategory = articles.filter((item) => item.slug !== article.slug && item.category === article.category);
-  return sameCategory.slice(0, limit);
+  const candidates = articles.filter((item) => item.slug !== article.slug);
+  const sameCategory = candidates.filter((item) => item.category === article.category);
+  const otherCategories = candidates.filter((item) => item.category !== article.category);
+
+  return [...sameCategory, ...otherCategories].slice(0, limit);
 }

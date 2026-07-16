@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { AnchorHTMLAttributes } from "react";
+import type { AnchorHTMLAttributes, HTMLAttributes } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Clock,
   Instagram,
-  Linkedin,
   Mail,
   MessageCircle,
   Phone,
@@ -20,7 +19,13 @@ import {
 } from "lucide-react";
 import { ArticleCard } from "@/components/articles/article-card";
 import { ArticleCover } from "@/components/articles/article-cover";
+import { ArticleDecisionFullText, ArticleDecisionSummary, getDecisionRows, isValidPdfUrl } from "@/components/articles/article-decision";
+import { ArticleAuthorBox, ArticleContactCta } from "@/components/articles/article-ending";
+import { ArticleShareActions } from "@/components/articles/article-share-actions";
+import { ArticleTableOfContents } from "@/components/articles/article-table-of-contents";
 import { Container } from "@/components/layout/container";
+import { formatReadingTime } from "@/lib/article-reading-time";
+import { enhanceHtmlHeadings, extractMdxHeadings, type ArticleHeading } from "@/lib/article-toc";
 import { getAllArticles } from "@/lib/articles";
 import { getCategoryFilterHref } from "@/lib/categories";
 import { formatDate } from "@/lib/format";
@@ -90,11 +95,23 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   };
 }
 
-const mdxComponents = {
-  a: (props: AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a {...props} className="font-semibold text-accent-1 underline decoration-accent-1/40 underline-offset-4" />
-  )
-};
+function createMdxComponents(headings: ArticleHeading[]) {
+  let headingIndex = 0;
+
+  return {
+    a: (props: AnchorHTMLAttributes<HTMLAnchorElement>) => (
+      <a {...props} className="font-semibold text-accent-1 underline decoration-accent-1/40 underline-offset-4" />
+    ),
+    h2: (props: HTMLAttributes<HTMLHeadingElement>) => {
+      const heading = headings[headingIndex++];
+      return <h2 {...props} id={heading?.id} />;
+    },
+    h3: (props: HTMLAttributes<HTMLHeadingElement>) => {
+      const heading = headings[headingIndex++];
+      return <h3 {...props} id={heading?.id} />;
+    }
+  };
+}
 
 function toAbsoluteUrl(value?: string) {
   if (!value) {
@@ -108,10 +125,22 @@ function toAbsoluteUrl(value?: string) {
   }
 }
 
+function getDecisionCitation(article: PublicArticle) {
+  const rows = getDecisionRows(article);
+
+  if (!rows.length) {
+    return undefined;
+  }
+
+  return rows.map((row) => `${row.label}: ${row.value}`).join(", ");
+}
+
 function getArticleJsonLd(article: PublicArticle) {
   const articleUrl = getArticleCanonicalUrl(article);
   const image = toAbsoluteUrl(article.ogImage || article.coverImage) || new URL("/opengraph-image", getPublicSiteUrl()).toString();
   const keywords = [article.focusKeyword, article.category].filter(Boolean);
+  const decisionCitation = getDecisionCitation(article);
+  const pdfUrl = isValidPdfUrl(article.decisionPdfUrl) ? article.decisionPdfUrl : undefined;
 
   return {
     "@context": "https://schema.org",
@@ -131,7 +160,18 @@ function getArticleJsonLd(article: PublicArticle) {
     },
     image: [image],
     articleSection: article.category,
-    ...(keywords.length ? { keywords } : {})
+    ...(keywords.length ? { keywords } : {}),
+    ...(decisionCitation ? { citation: decisionCitation } : {}),
+    ...(pdfUrl
+      ? {
+          associatedMedia: {
+            "@type": "MediaObject",
+            contentUrl: pdfUrl,
+            encodingFormat: "application/pdf",
+            name: article.decisionPdfTitle || article.title
+          }
+        }
+      : {})
   };
 }
 
@@ -178,8 +218,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const allArticles = await getAllPublicArticleMetas();
   const relatedArticles = getRelatedArticles(article, allArticles, 3);
   const articleUrl = getArticleCanonicalUrl(article);
-  const encodedUrl = encodeURIComponent(articleUrl);
-  const encodedTitle = encodeURIComponent(article.title);
+  const articleContent =
+    article.contentFormat === "html"
+      ? enhanceHtmlHeadings(article.content)
+      : {
+          content: article.content,
+          headings: extractMdxHeadings(article.content)
+        };
+  const mdxComponents = article.contentFormat === "mdx" ? createMdxComponents(articleContent.headings) : undefined;
   const jsonLd = getArticleJsonLd(article);
   const breadcrumbJsonLd = getBreadcrumbJsonLd(article);
 
@@ -255,7 +301,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </span>
             <span className="inline-flex items-center gap-2">
               <Clock className="h-4 w-4 text-accent-1" aria-hidden />
-              {article.readingTime} dakika okuma
+              {formatReadingTime(article.readingTime)}
             </span>
           </div>
 
@@ -276,9 +322,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <section className="bg-white py-14 md:py-20">
         <Container className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div lang="tr" className="article-prose prose mx-auto w-full max-w-3xl">
+            <ArticleTableOfContents headings={articleContent.headings} mobile className="not-prose mb-8 lg:hidden" />
+            <ArticleDecisionSummary article={article} />
+
             {article.contentFormat === "mdx" ? (
               <MDXRemote
-                source={article.content}
+                source={articleContent.content}
                 components={mdxComponents}
                 options={{
                   mdxOptions: {
@@ -287,15 +336,21 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 }}
               />
             ) : (
-              <div dangerouslySetInnerHTML={{ __html: article.content }} />
+              <div dangerouslySetInnerHTML={{ __html: articleContent.content }} />
             )}
 
             <div className="mt-10 rounded-[8px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900">
               Bu içerik genel bilgilendirme amacıyla hazırlanmıştır. Somut olayınıza ilişkin hukuki değerlendirme ve profesyonel danışmanlık yerine geçmez.
             </div>
+            <ArticleDecisionFullText article={article} />
+            <ArticleShareActions url={articleUrl} title={article.title} />
+            <ArticleContactCta />
+            <ArticleAuthorBox />
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-28 lg:self-start">
+            <ArticleTableOfContents headings={articleContent.headings} className="hidden lg:block" />
+
             <div className="rounded-[8px] border border-primary/10 bg-background p-5">
               <div className="flex items-center gap-3">
                 <Image
@@ -357,33 +412,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 </a>
               </div>
             </div>
-
-            <div className="rounded-[8px] border border-primary/10 bg-background p-5">
-              <p className="text-sm font-semibold text-primary">Paylaş</p>
-              <div className="mt-4 flex gap-2 lg:flex-col">
-                <a
-                  href={`mailto:?subject=${encodedTitle}&body=${encodedUrl}`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-primary/10 bg-white text-primary transition hover:border-accent-2 hover:text-accent-1"
-                  aria-label="E-posta ile paylaş"
-                >
-                  <Mail className="h-4 w-4" aria-hidden />
-                </a>
-                <a
-                  href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-primary/10 bg-white text-primary transition hover:border-accent-2 hover:text-accent-1"
-                  aria-label="X üzerinde paylaş"
-                >
-                  <Twitter className="h-4 w-4" aria-hidden />
-                </a>
-                <a
-                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-[6px] border border-primary/10 bg-white text-primary transition hover:border-accent-2 hover:text-accent-1"
-                  aria-label="LinkedIn üzerinde paylaş"
-                >
-                  <Linkedin className="h-4 w-4" aria-hidden />
-                </a>
-              </div>
-            </div>
           </aside>
         </Container>
       </section>
@@ -392,7 +420,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         <section className="bg-background py-14 md:py-20">
           <Container>
             <div className="mb-8">
-              <p className="text-sm font-semibold text-accent-1">İlgili makaleler</p>
+              <p className="text-sm font-semibold text-accent-1">İlgili Yazılar</p>
               <h2 className="mt-2 font-serif text-3xl font-bold text-primary">Benzer konular</h2>
             </div>
             <div className="grid gap-6 md:grid-cols-3">

@@ -1,5 +1,5 @@
 import sanitizeHtml from "sanitize-html";
-import readingTime from "reading-time";
+import { estimateReadingMinutesFromText } from "@/lib/article-reading-time";
 
 const allowedTextAlignments = [/^left$/, /^center$/, /^right$/];
 
@@ -77,5 +77,5 @@ export function getPlainTextFromHtml(html: string) {
 
 export function estimateHtmlReadingTime(html: string) {
   const text = getPlainTextFromHtml(html);
-  return Math.max(1, Math.ceil(readingTime(text).minutes));
+  return estimateReadingMinutesFromText(text);
 }

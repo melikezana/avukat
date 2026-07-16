@@ -34,6 +34,12 @@ type ArticleRow = {
   og_image_url?: string | null;
   focus_keyword?: string | null;
   author_name?: string | null;
+  decision_pdf_url?: string | null;
+  decision_pdf_title?: string | null;
+  decision_court?: string | null;
+  decision_case_no?: string | null;
+  decision_number?: string | null;
+  decision_date?: string | null;
 };
 
 function normalizeStatus(status: string | null): ArticleStatus {
@@ -54,7 +60,13 @@ function toFormFields(article: ArticleRow): ArticleFormFields {
     canonical_url: article.canonical_url ?? "",
     og_image_url: article.og_image_url ?? "",
     focus_keyword: article.focus_keyword ?? "",
-    author_name: article.author_name ?? ""
+    author_name: article.author_name ?? "",
+    decision_pdf_url: article.decision_pdf_url ?? "",
+    decision_pdf_title: article.decision_pdf_title ?? "",
+    decision_court: article.decision_court ?? "",
+    decision_case_no: article.decision_case_no ?? "",
+    decision_number: article.decision_number ?? "",
+    decision_date: article.decision_date ?? ""
   };
 }
 

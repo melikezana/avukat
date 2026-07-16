@@ -1,29 +1,40 @@
 import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
-import { getSupabaseConfig } from "@/lib/supabase/config";
 
-function getSupabaseAdminKey() {
-  const supabaseAdminKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+function getSupabaseAdminConfig() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
-  if (!supabaseAdminKey) {
+  if (!supabaseUrl || !supabaseSecretKey) {
+    const missingVariables = [
+      ["NEXT_PUBLIC_SUPABASE_URL", supabaseUrl],
+      ["SUPABASE_SECRET_KEY", supabaseSecretKey]
+    ]
+      .filter(([, value]) => !value)
+      .map(([name]) => name);
+
     throw new Error(
-      "Supabase admin client could not be created. Missing environment variable: SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY."
+      `Supabase admin client could not be created. Missing environment variable(s): ${missingVariables.join(", ")}.`
     );
   }
 
-  return supabaseAdminKey;
+  return {
+    supabaseUrl,
+    supabaseSecretKey
+  };
 }
 
 export function createSupabaseAdminClient() {
-  const { supabaseUrl } = getSupabaseConfig();
+  const { supabaseUrl, supabaseSecretKey } = getSupabaseAdminConfig();
 
-  return createClient(supabaseUrl, getSupabaseAdminKey(), {
+  const adminClient = createClient(supabaseUrl, supabaseSecretKey, {
     auth: {
       autoRefreshToken: false,
       detectSessionInUrl: false,
       persistSession: false
     }
   });
+
+  return adminClient;
 }

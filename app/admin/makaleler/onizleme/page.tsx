@@ -6,6 +6,7 @@ import { ArticleCover } from "@/components/articles/article-cover";
 import { Container } from "@/components/layout/container";
 import { getArticleCategoryLabel } from "@/lib/article-categories";
 import { estimateHtmlReadingTime, sanitizeArticleHtml } from "@/lib/article-html";
+import { formatReadingTime } from "@/lib/article-reading-time";
 import { formatDate } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -109,7 +110,7 @@ export default async function AdminArticlePreviewPage({ searchParams }: PreviewP
             </span>
             <span className="inline-flex items-center gap-2">
               <Clock className="h-4 w-4 text-accent-1" aria-hidden />
-              {estimateHtmlReadingTime(content)} dakika okuma
+              {formatReadingTime(estimateHtmlReadingTime(content))}
             </span>
             <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">
               {article.status === "published" ? "Yayında" : "Taslak önizleme"}

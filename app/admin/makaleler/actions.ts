@@ -8,6 +8,7 @@ import { defaultArticleAuthor } from "@/lib/article-defaults";
 import { getPlainTextFromHtml, sanitizeArticleHtml } from "@/lib/article-html";
 import { consumeRateLimit, isSameOriginRequest } from "@/lib/admin/security";
 import { slugifyTurkish } from "@/lib/categories";
+import { absoluteUrl } from "@/lib/site";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ArticleStatus = "draft" | "published";
@@ -26,6 +27,12 @@ export type ArticleFormFields = {
   og_image_url: string;
   focus_keyword: string;
   author_name: string;
+  decision_pdf_url: string;
+  decision_pdf_title: string;
+  decision_court: string;
+  decision_case_no: string;
+  decision_number: string;
+  decision_date: string;
 };
 
 export type ArticleFormState = {
@@ -54,11 +61,27 @@ type ArticleInsertPayload = {
   og_image_url: string | null;
   focus_keyword: string | null;
   author_name: string;
+  decision_pdf_url: string | null;
+  decision_pdf_title: string | null;
+  decision_court: string | null;
+  decision_case_no: string | null;
+  decision_number: string | null;
+  decision_date: string | null;
 };
 
 type ArticleUpdatePayload = ArticleInsertPayload & {
   updated_at: string;
 };
+
+type ArticleDecisionPayloadFields = Pick<
+  ArticleInsertPayload,
+  | "decision_pdf_url"
+  | "decision_pdf_title"
+  | "decision_court"
+  | "decision_case_no"
+  | "decision_number"
+  | "decision_date"
+>;
 
 type ExistingArticleForUpdate = {
   slug: string | null;
@@ -134,7 +157,22 @@ const articleFormSchema = z.object({
     .optional()
     .refine(isOptionalHttpUrl, "Open Graph görsel URL'si geçerli bir http/https URL olmalıdır."),
   focus_keyword: z.string().trim().max(100, "Odak anahtar kelime en fazla 100 karakter olabilir.").optional(),
-  author_name: z.string().trim().min(1, "Yazar adı zorunludur.").max(120, "Yazar adı çok uzun.")
+  author_name: z.string().trim().min(1, "Yazar adı zorunludur.").max(120, "Yazar adı çok uzun."),
+  decision_pdf_url: z
+    .string()
+    .trim()
+    .max(1000, "PDF URL çok uzun.")
+    .optional()
+    .refine(isOptionalHttpUrl, "PDF URL geçerli bir http/https URL olmalıdır."),
+  decision_pdf_title: z.string().trim().max(180, "PDF başlığı çok uzun.").optional(),
+  decision_court: z.string().trim().max(180, "Mahkeme bilgisi çok uzun.").optional(),
+  decision_case_no: z.string().trim().max(80, "Esas no çok uzun.").optional(),
+  decision_number: z.string().trim().max(80, "Karar no çok uzun.").optional(),
+  decision_date: z
+    .string()
+    .trim()
+    .optional()
+    .refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), "Karar tarihi geçerli bir tarih olmalıdır.")
 });
 
 function getStringField(formData: FormData, field: keyof ArticleFormFields) {
@@ -160,7 +198,13 @@ function getFields(formData: FormData): ArticleFormFields {
     canonical_url: getStringField(formData, "canonical_url"),
     og_image_url: getStringField(formData, "og_image_url"),
     focus_keyword: getStringField(formData, "focus_keyword"),
-    author_name: getStringField(formData, "author_name") || defaultArticleAuthor
+    author_name: getStringField(formData, "author_name") || defaultArticleAuthor,
+    decision_pdf_url: getStringField(formData, "decision_pdf_url"),
+    decision_pdf_title: getStringField(formData, "decision_pdf_title"),
+    decision_court: getStringField(formData, "decision_court"),
+    decision_case_no: getStringField(formData, "decision_case_no"),
+    decision_number: getStringField(formData, "decision_number"),
+    decision_date: getStringField(formData, "decision_date")
   };
 }
 
@@ -224,6 +268,36 @@ function getWriteErrorMessage(code?: string) {
   return "Makale şu anda kaydedilemiyor. Lütfen daha sonra tekrar deneyin.";
 }
 
+function hasDecisionColumnWriteError(error: { code?: string; message?: string; details?: string; hint?: string }) {
+  const message = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`;
+  return error.code === "42703" || /decision_(pdf_url|pdf_title|court|case_no|number|date)/i.test(message);
+}
+
+function hasDecisionPayloadValues(payload: ArticleDecisionPayloadFields) {
+  return Boolean(
+    payload.decision_pdf_url ||
+      payload.decision_pdf_title ||
+      payload.decision_court ||
+      payload.decision_case_no ||
+      payload.decision_number ||
+      payload.decision_date
+  );
+}
+
+function omitDecisionPayloadFields<T extends ArticleDecisionPayloadFields>(payload: T) {
+  const {
+    decision_pdf_url: _decisionPdfUrl,
+    decision_pdf_title: _decisionPdfTitle,
+    decision_court: _decisionCourt,
+    decision_case_no: _decisionCaseNo,
+    decision_number: _decisionNumber,
+    decision_date: _decisionDate,
+    ...rest
+  } = payload;
+
+  return rest;
+}
+
 function revalidateArticlePaths(slug?: string | null, previousSlug?: string | null) {
   revalidatePath("/admin");
   revalidatePath("/admin/makaleler");
@@ -279,21 +353,29 @@ function buildPayload(
   content: string,
   previousPublishedAt?: string | null
 ): ArticleInsertPayload {
+  const coverImageUrl = getNullableString(parsedData.cover_image_url);
+
   return {
     title: parsedData.title,
     slug,
     excerpt: parsedData.excerpt ?? "",
     content,
     category: parsedData.category,
-    cover_image_url: getNullableString(parsedData.cover_image_url),
+    cover_image_url: coverImageUrl,
     status: parsedData.status,
     published_at: getPublishedAt(parsedData.status, previousPublishedAt),
     seo_title: getNullableString(parsedData.seo_title),
     seo_description: getNullableString(parsedData.seo_description),
-    canonical_url: getNullableString(parsedData.canonical_url),
-    og_image_url: getNullableString(parsedData.og_image_url),
+    canonical_url: getNullableString(parsedData.canonical_url) ?? absoluteUrl(`/makaleler/${slug}`),
+    og_image_url: getNullableString(parsedData.og_image_url) ?? coverImageUrl,
     focus_keyword: getNullableString(parsedData.focus_keyword),
-    author_name: parsedData.author_name || defaultArticleAuthor
+    author_name: parsedData.author_name || defaultArticleAuthor,
+    decision_pdf_url: getNullableString(parsedData.decision_pdf_url),
+    decision_pdf_title: getNullableString(parsedData.decision_pdf_title),
+    decision_court: getNullableString(parsedData.decision_court),
+    decision_case_no: getNullableString(parsedData.decision_case_no),
+    decision_number: getNullableString(parsedData.decision_number),
+    decision_date: getNullableString(parsedData.decision_date)
   };
 }
 
@@ -386,13 +468,20 @@ export async function createArticleAction(
   }
 
   const insertPayload = buildPayload(parsed.data, slug, content);
-  const { error } = await supabase.from("articles").insert(insertPayload);
+  let { error } = await supabase.from("articles").insert(insertPayload);
+
+  if (error && hasDecisionColumnWriteError(error) && !hasDecisionPayloadValues(insertPayload)) {
+    const retryResult = await supabase.from("articles").insert(omitDecisionPayloadFields(insertPayload));
+    error = retryResult.error;
+  }
 
   if (error) {
     console.error("[admin.articles.create]", getSupabaseErrorLog(error));
 
     return {
-      message: getWriteErrorMessage(error.code),
+      message: hasDecisionColumnWriteError(error)
+        ? "Karar PDF alanları için Supabase SQL migration henüz çalıştırılmamış. Lütfen migration dosyasını SQL Editor'da çalıştırın."
+        : getWriteErrorMessage(error.code),
       errors:
         error.code === "23505"
           ? {
@@ -510,13 +599,25 @@ export async function updateArticleAction(
     updated_at: now
   } satisfies ArticleUpdatePayload;
 
-  const { error } = await supabase.from("articles").update(updatePayload).eq("id", articleId).select("id").single();
+  let { error } = await supabase.from("articles").update(updatePayload).eq("id", articleId).select("id").single();
+
+  if (error && hasDecisionColumnWriteError(error) && !hasDecisionPayloadValues(updatePayload)) {
+    const retryResult = await supabase
+      .from("articles")
+      .update(omitDecisionPayloadFields(updatePayload))
+      .eq("id", articleId)
+      .select("id")
+      .single();
+    error = retryResult.error;
+  }
 
   if (error) {
     console.error("[admin.articles.update]", getSupabaseErrorLog(error));
 
     return {
-      message: getWriteErrorMessage(error.code),
+      message: hasDecisionColumnWriteError(error)
+        ? "Karar PDF alanları için Supabase SQL migration henüz çalıştırılmamış. Lütfen migration dosyasını SQL Editor'da çalıştırın."
+        : getWriteErrorMessage(error.code),
       errors:
         error.code === "23505"
           ? {

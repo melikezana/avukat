@@ -38,6 +38,22 @@ Bu dosya otomatik çalıştırılmadı. Migration `ALTER TABLE ... ADD COLUMN IF
 
 Makale silme işlemi yalnızca `articles` kaydını siler; kapak görseli veya içerik görselleri Storage üzerinden otomatik kaldırılmaz. Kullanılmayan Storage dosyaları için ileride ayrı, güvenli ve referans kontrolü yapan bir temizlik sistemi kurulmalıdır.
 
+### Karar PDF alanları ve Storage bucket
+
+Karar PDF'i, karar künyesi ve PDF bağlantısı alanları için aşağıdaki migration dosyasını Supabase SQL Editor'da manuel olarak çalıştırın:
+
+```text
+supabase/migrations/20260716090000_add_article_decision_pdf_fields.sql
+```
+
+Bu dosya otomatik çalıştırılmaz. Migration `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` ile `decision_pdf_url`, `decision_pdf_title`, `decision_court`, `decision_case_no`, `decision_number` ve `decision_date` kolonlarını ekler.
+
+PDF yükleme için Supabase Dashboard > Storage bölümünde `legal-documents` adında public bir bucket oluşturun. Bucket public değilse makale detayında kullanılacak public PDF URL'i üretilemez. Admin formundaki PDF yükleme işlemi dosyaları bu bucket içinde `court-decisions/` klasörüne güvenli ve benzersiz dosya adıyla yükler.
+
+Karar makalesi eklemek için admin panelinde makaleyi oluşturun veya düzenleyin, `Karar Bilgileri` accordion alanındaki mahkeme/esas/karar/tarih bilgilerini doldurun, ardından `Karar PDF'i` accordion alanında PDF URL girin ya da PDF dosyası yükleyin. Yükleme yalnızca oturum açmış admin için açıktır, sadece `application/pdf` kabul eder ve en fazla 15 MB dosya yükler. PDF kaldırma butonu yalnızca makale kaydındaki bağlantıyı temizler; Storage dosyasını otomatik silmez.
+
+Open Graph görsel URL'i boş bırakılırsa sistem kapak görseli URL'ini fallback olarak kullanır. Canonical URL manuel girilmezse kayıt sırasında makale slug'ından otomatik canonical URL üretilir.
+
 ## Üretim build
 
 ```bash

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock } from "lucide-react";
 import { ArticleCover } from "@/components/articles/article-cover";
 import type { ArticleMeta } from "@/lib/articles";
+import { formatReadingTime } from "@/lib/article-reading-time";
 import { formatDate } from "@/lib/format";
 
 type ArticleCardProps = {
@@ -36,7 +37,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-accent-1" aria-hidden />
-              {article.readingTime} dakika okuma
+              {formatReadingTime(article.readingTime)}
             </span>
           </div>
           <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-accent-1 transition group-hover:text-accent-2">
