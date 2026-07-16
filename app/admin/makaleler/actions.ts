@@ -105,6 +105,15 @@ function isHttpUrl(value: string) {
   }
 }
 
+function isHttpsUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function isSafeImageUrl(value?: string) {
   if (!value) {
     return true;
@@ -119,6 +128,10 @@ function isSafeImageUrl(value?: string) {
 
 function isOptionalHttpUrl(value?: string) {
   return !value || isHttpUrl(value);
+}
+
+function isOptionalHttpsUrl(value?: string) {
+  return !value || isHttpsUrl(value);
 }
 
 const articleFormSchema = z.object({
@@ -163,7 +176,7 @@ const articleFormSchema = z.object({
     .trim()
     .max(1000, "PDF URL çok uzun.")
     .optional()
-    .refine(isOptionalHttpUrl, "PDF URL geçerli bir http/https URL olmalıdır."),
+    .refine(isOptionalHttpsUrl, "PDF URL geçerli bir https URL olmalıdır."),
   decision_pdf_title: z.string().trim().max(180, "PDF başlığı çok uzun.").optional(),
   decision_court: z.string().trim().max(180, "Mahkeme bilgisi çok uzun.").optional(),
   decision_case_no: z.string().trim().max(80, "Esas no çok uzun.").optional(),

@@ -1,39 +1,74 @@
 import { Download, ExternalLink, FileText, Scale } from "lucide-react";
-import type { PublicArticle } from "@/lib/public-articles";
 import { formatDate } from "@/lib/format";
+
+export type DecisionPdfArticle = {
+  decisionPdfUrl?: string | null;
+  decisionPdfTitle?: string | null;
+  decisionCourt?: string | null;
+  decisionCaseNo?: string | null;
+  decisionNumber?: string | null;
+  decisionDate?: string | null;
+};
 
 type DecisionRow = {
   label: string;
   value: string;
 };
 
-export function getDecisionRows(article: PublicArticle): DecisionRow[] {
+function formatDecisionDate(value?: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return formatDate(value);
+}
+
+export function getDecisionRows(article: DecisionPdfArticle): DecisionRow[] {
   return [
     { label: "Mahkeme", value: article.decisionCourt ?? "" },
     { label: "Esas No", value: article.decisionCaseNo ?? "" },
     { label: "Karar No", value: article.decisionNumber ?? "" },
-    { label: "Karar Tarihi", value: article.decisionDate ? formatDate(article.decisionDate) : "" }
+    { label: "Karar Tarihi", value: formatDecisionDate(article.decisionDate) }
   ].filter((row) => row.value);
 }
 
-export function hasDecisionInfo(article: PublicArticle) {
+export function hasDecisionInfo(article: DecisionPdfArticle) {
   return getDecisionRows(article).length > 0;
 }
 
-export function isValidPdfUrl(value?: string) {
+export function isValidPdfUrl(value?: string | null) {
   if (!value) {
     return false;
   }
 
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return url.protocol === "https:";
   } catch {
     return false;
   }
 }
 
-export function ArticleDecisionSummary({ article }: { article: PublicArticle }) {
+function getDownloadHref(pdfUrl: string, title?: string | null) {
+  const params = new URLSearchParams({
+    url: pdfUrl
+  });
+  const filename = title?.trim();
+
+  if (filename) {
+    params.set("filename", filename);
+  }
+
+  return `/api/decision-pdf/download?${params.toString()}`;
+}
+
+export function ArticleDecisionSummary({ article }: { article: DecisionPdfArticle }) {
   const rows = getDecisionRows(article);
 
   if (!rows.length) {
@@ -62,12 +97,14 @@ export function ArticleDecisionSummary({ article }: { article: PublicArticle }) 
   );
 }
 
-export function ArticleDecisionFullText({ article }: { article: PublicArticle }) {
-  if (!isValidPdfUrl(article.decisionPdfUrl)) {
+export function DecisionPdfCard({ article }: { article: DecisionPdfArticle }) {
+  const pdfUrl = article.decisionPdfUrl?.trim() ?? "";
+
+  if (!isValidPdfUrl(pdfUrl)) {
     return null;
   }
 
-  const title = article.decisionPdfTitle || "Karar PDF’i";
+  const title = article.decisionPdfTitle?.trim();
   const rows = getDecisionRows(article);
 
   return (
@@ -81,26 +118,28 @@ export function ArticleDecisionFullText({ article }: { article: PublicArticle })
             <h2 id="decision-full-text-title" className="font-serif text-2xl font-bold text-primary">
               Kararın Tam Metni
             </h2>
-            <p className="mt-1 text-sm leading-6 text-muted">{title}</p>
+            {title ? <p className="mt-1 text-sm leading-6 text-muted">{title}</p> : null}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <a
-            href={article.decisionPdfUrl}
+            href={pdfUrl}
             target="_blank"
             rel="noreferrer"
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[6px] bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
           >
             <ExternalLink className="h-4 w-4" aria-hidden />
-            PDF’i Görüntüle
+            PDF’yi Görüntüle
           </a>
           <a
-            href={article.decisionPdfUrl}
+            href={getDownloadHref(pdfUrl, title)}
+            target="_blank"
+            rel="noreferrer"
             download
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[6px] border border-primary/10 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:border-accent-2 hover:text-accent-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-1"
           >
             <Download className="h-4 w-4" aria-hidden />
-            PDF’i İndir
+            PDF’yi İndir
           </a>
         </div>
       </div>
@@ -117,4 +156,8 @@ export function ArticleDecisionFullText({ article }: { article: PublicArticle })
       ) : null}
     </section>
   );
+}
+
+export function ArticleDecisionFullText({ article }: { article: DecisionPdfArticle }) {
+  return <DecisionPdfCard article={article} />;
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
 import { ArticleCover } from "@/components/articles/article-cover";
+import { DecisionPdfCard, type DecisionPdfArticle } from "@/components/articles/article-decision";
 import { Container } from "@/components/layout/container";
 import { getArticleCategoryLabel } from "@/lib/article-categories";
 import { estimateHtmlReadingTime, sanitizeArticleHtml } from "@/lib/article-html";
@@ -21,9 +22,18 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 type PreviewPageProps = {
-  searchParams?: {
-    id?: string;
-  };
+  searchParams?: PreviewSearchParams;
+};
+
+type PreviewSearchParams = {
+  id?: string | string[];
+  formPreview?: string | string[];
+  decision_pdf_url?: string | string[];
+  decision_pdf_title?: string | string[];
+  decision_court?: string | string[];
+  decision_case_no?: string | string[];
+  decision_number?: string | string[];
+  decision_date?: string | string[];
 };
 
 type PreviewArticleRow = {
@@ -38,7 +48,62 @@ type PreviewArticleRow = {
   published_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  decision_pdf_url: string | null;
+  decision_pdf_title: string | null;
+  decision_court: string | null;
+  decision_case_no: string | null;
+  decision_number: string | null;
+  decision_date: string | null;
 };
+
+const previewArticleSelect =
+  "id,title,slug,excerpt,content,category,cover_image_url,status,published_at,created_at,updated_at,decision_pdf_url,decision_pdf_title,decision_court,decision_case_no,decision_number,decision_date";
+
+const decisionPreviewFields = [
+  "decision_pdf_url",
+  "decision_pdf_title",
+  "decision_court",
+  "decision_case_no",
+  "decision_number",
+  "decision_date"
+] as const;
+
+const decisionPreviewFieldLimits: Record<(typeof decisionPreviewFields)[number], number> = {
+  decision_pdf_url: 1000,
+  decision_pdf_title: 180,
+  decision_court: 180,
+  decision_case_no: 80,
+  decision_number: 80,
+  decision_date: 10
+};
+
+function getSearchParamValue(searchParams: PreviewSearchParams | undefined, key: keyof PreviewSearchParams) {
+  const value = searchParams?.[key];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getDecisionOverride(searchParams: PreviewSearchParams | undefined, key: (typeof decisionPreviewFields)[number]) {
+  if (!searchParams || !Object.prototype.hasOwnProperty.call(searchParams, key)) {
+    return undefined;
+  }
+
+  return (getSearchParamValue(searchParams, key) ?? "").trim().slice(0, decisionPreviewFieldLimits[key]);
+}
+
+function hasDecisionPreviewOverrides(searchParams: PreviewSearchParams | undefined) {
+  return decisionPreviewFields.some((field) => getDecisionOverride(searchParams, field) !== undefined);
+}
+
+function getDecisionPreviewArticle(article: PreviewArticleRow, searchParams: PreviewSearchParams | undefined): DecisionPdfArticle {
+  return {
+    decisionPdfUrl: getDecisionOverride(searchParams, "decision_pdf_url") ?? article.decision_pdf_url,
+    decisionPdfTitle: getDecisionOverride(searchParams, "decision_pdf_title") ?? article.decision_pdf_title,
+    decisionCourt: getDecisionOverride(searchParams, "decision_court") ?? article.decision_court,
+    decisionCaseNo: getDecisionOverride(searchParams, "decision_case_no") ?? article.decision_case_no,
+    decisionNumber: getDecisionOverride(searchParams, "decision_number") ?? article.decision_number,
+    decisionDate: getDecisionOverride(searchParams, "decision_date") ?? article.decision_date
+  };
+}
 
 async function getPreviewArticle(id?: string) {
   const supabase = createSupabaseServerClient();
@@ -48,14 +113,15 @@ async function getPreviewArticle(id?: string) {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    redirect("/yonetim-giris?next=/admin/makaleler/onizleme");
+    const nextPath = id ? `/admin/makaleler/onizleme?id=${encodeURIComponent(id)}` : "/admin/makaleler/onizleme";
+    redirect(`/yonetim-giris?next=${encodeURIComponent(nextPath)}`);
   }
 
   if (!id) {
     return null;
   }
 
-  const { data, error } = await supabase.from("articles").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase.from("articles").select(previewArticleSelect).eq("id", id).maybeSingle();
 
   if (error) {
     console.error("[admin.articles.preview]", {
@@ -73,7 +139,8 @@ async function getPreviewArticle(id?: string) {
 }
 
 export default async function AdminArticlePreviewPage({ searchParams }: PreviewPageProps) {
-  const article = await getPreviewArticle(searchParams?.id);
+  const id = getSearchParamValue(searchParams, "id");
+  const article = await getPreviewArticle(id);
 
   if (!article) {
     notFound();
@@ -82,6 +149,8 @@ export default async function AdminArticlePreviewPage({ searchParams }: PreviewP
   const content = sanitizeArticleHtml(article.content ?? "");
   const date = article.published_at || article.created_at || new Date().toISOString();
   const category = getArticleCategoryLabel(article.category) || "Kategori";
+  const decisionArticle = getDecisionPreviewArticle(article, searchParams);
+  const usesFormDecisionPreview = hasDecisionPreviewOverrides(searchParams);
 
   return (
     <article className="bg-background">
@@ -93,6 +162,15 @@ export default async function AdminArticlePreviewPage({ searchParams }: PreviewP
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Admin listeye dön
         </Link>
+
+        {usesFormDecisionPreview ? (
+          <div
+            role="status"
+            className="mb-6 rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800"
+          >
+            Önizleme güncel formdaki karar PDF bilgileriyle gösteriliyor.
+          </div>
+        ) : null}
 
         <div className="mx-auto max-w-4xl">
           <p className="mb-4 inline-flex border border-accent-1/25 bg-white px-3 py-2 text-sm font-semibold text-accent-1">
@@ -132,7 +210,10 @@ export default async function AdminArticlePreviewPage({ searchParams }: PreviewP
 
       <section className="bg-white py-14 md:py-20">
         <Container>
-          <div lang="tr" className="article-prose prose mx-auto w-full max-w-3xl" dangerouslySetInnerHTML={{ __html: content }} />
+          <div lang="tr" className="article-prose prose mx-auto w-full max-w-3xl">
+            <div dangerouslySetInnerHTML={{ __html: content }} />
+            <DecisionPdfCard article={decisionArticle} />
+          </div>
         </Container>
       </section>
     </article>

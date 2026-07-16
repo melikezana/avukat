@@ -12,6 +12,7 @@ import {
 } from "@/app/admin/makaleler/actions";
 import { ArticleCoverUpload } from "@/components/admin/article-cover-upload";
 import { ArticlePdfUpload } from "@/components/admin/article-pdf-upload";
+import { DecisionPdfCard, type DecisionPdfArticle } from "@/components/articles/article-decision";
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
 import { ARTICLE_CATEGORY_OPTIONS, getArticleCategoryLabel, normalizeArticleCategory } from "@/lib/article-categories";
 import { defaultArticleAuthor } from "@/lib/article-defaults";
@@ -44,6 +45,15 @@ const inputClassName =
   "mt-2 min-h-11 w-full rounded-[6px] border border-[#d8c7a8] bg-white px-3 py-2 text-sm text-[var(--color-navy)] transition focus:border-[#c8a45d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]";
 
 const labelClassName = "text-sm font-semibold text-[var(--color-navy)]";
+
+const decisionPreviewFields = [
+  "decision_pdf_url",
+  "decision_pdf_title",
+  "decision_court",
+  "decision_case_no",
+  "decision_number",
+  "decision_date"
+] as const;
 
 type ArticleCreateFormProps =
   | {
@@ -106,6 +116,30 @@ function CharacterCounter({ value, limit }: CharacterCounterProps) {
       {value.length}/{limit}
     </p>
   );
+}
+
+function toDecisionPdfArticle(fields: ArticleFormFields): DecisionPdfArticle {
+  return {
+    decisionPdfUrl: fields.decision_pdf_url,
+    decisionPdfTitle: fields.decision_pdf_title,
+    decisionCourt: fields.decision_court,
+    decisionCaseNo: fields.decision_case_no,
+    decisionNumber: fields.decision_number,
+    decisionDate: fields.decision_date
+  };
+}
+
+function getArticlePreviewHref(articleId: string, fields: ArticleFormFields) {
+  const params = new URLSearchParams({
+    id: articleId,
+    formPreview: "1"
+  });
+
+  for (const field of decisionPreviewFields) {
+    params.set(field, fields[field]);
+  }
+
+  return `/admin/makaleler/onizleme?${params.toString()}`;
 }
 
 function SubmitButton({ intent, disabled, mode }: SubmitButtonProps) {
@@ -195,7 +229,10 @@ function PreviewModal({
             </div>
           </div>
           <section className="bg-white py-12">
-            <div className="article-prose mx-auto w-full max-w-3xl px-5" dangerouslySetInnerHTML={{ __html: fields.content }} />
+            <div className="article-prose mx-auto w-full max-w-3xl px-5">
+              <div dangerouslySetInnerHTML={{ __html: fields.content }} />
+              <DecisionPdfCard article={toDecisionPdfArticle(fields)} />
+            </div>
           </section>
         </article>
       </div>
@@ -271,6 +308,15 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
   function regenerateSlug() {
     setSlugEdited(false);
     updateField("slug", slugifyTurkish(fields.title));
+  }
+
+  function handlePreviewClick() {
+    if (mode === "edit" && articleId) {
+      window.open(getArticlePreviewHref(articleId, fields), "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    setIsPreviewOpen(true);
   }
 
   const titleError = getFieldError(state, "title");
@@ -679,11 +725,12 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
-            onClick={() => setIsPreviewOpen(true)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[6px] border border-[#d8c7a8] bg-white px-5 py-3 text-sm font-semibold text-[var(--color-navy)] transition hover:border-[#c8a45d] hover:text-[var(--color-gold)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
+            onClick={handlePreviewClick}
+            disabled={isUploading}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[6px] border border-[#d8c7a8] bg-white px-5 py-3 text-sm font-semibold text-[var(--color-navy)] transition hover:border-[#c8a45d] hover:text-[var(--color-gold)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
           >
             <Eye className="h-4 w-4" aria-hidden />
-            Önizle
+            {isUploading ? "Yükleme sürüyor" : "Önizle"}
           </button>
           <div className="flex flex-col gap-3 sm:flex-row">
             <SubmitButton intent="draft" mode={mode} disabled={isUploading} />

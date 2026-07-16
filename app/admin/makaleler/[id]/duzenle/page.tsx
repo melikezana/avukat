@@ -42,6 +42,9 @@ type ArticleRow = {
   decision_date?: string | null;
 };
 
+const editArticleSelect =
+  "id,title,slug,excerpt,content,category,cover_image_url,status,seo_title,seo_description,canonical_url,og_image_url,focus_keyword,author_name,decision_pdf_url,decision_pdf_title,decision_court,decision_case_no,decision_number,decision_date";
+
 function normalizeStatus(status: string | null): ArticleStatus {
   return status === "published" ? "published" : "draft";
 }
@@ -83,7 +86,7 @@ async function getArticle(id: string) {
 
   const { data, error } = await supabase
     .from("articles")
-    .select("*")
+    .select(editArticleSelect)
     .eq("id", id)
     .single();
 

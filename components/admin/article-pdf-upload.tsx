@@ -51,6 +51,14 @@ function getUploadErrorMessage(response: UploadResponse | null) {
   return undefined;
 }
 
+function isHttpsUrl(value: string) {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function ArticlePdfUpload({ value, onChange, onUploadStateChange }: ArticlePdfUploadProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -229,15 +237,17 @@ export function ArticlePdfUpload({ value, onChange, onUploadStateChange }: Artic
 
             {value ? (
               <>
-                <a
-                  href={value}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[6px] border border-[#d8c7a8] bg-white px-3 py-2 text-sm font-bold text-[var(--color-navy)] transition hover:border-[#c8a45d] hover:text-[var(--color-gold)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
-                >
-                  <ExternalLink className="h-4 w-4" aria-hidden />
-                  Önizle
-                </a>
+                {isHttpsUrl(value) ? (
+                  <a
+                    href={value}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[6px] border border-[#d8c7a8] bg-white px-3 py-2 text-sm font-bold text-[var(--color-navy)] transition hover:border-[#c8a45d] hover:text-[var(--color-gold)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden />
+                    Önizle
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   onClick={handleRemove}

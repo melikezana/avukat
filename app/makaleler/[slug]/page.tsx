@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { ArticleCard } from "@/components/articles/article-card";
 import { ArticleCover } from "@/components/articles/article-cover";
-import { ArticleDecisionFullText, ArticleDecisionSummary, getDecisionRows, isValidPdfUrl } from "@/components/articles/article-decision";
+import { ArticleDecisionSummary, DecisionPdfCard, getDecisionRows, isValidPdfUrl } from "@/components/articles/article-decision";
 import { ArticleAuthorBox, ArticleContactCta } from "@/components/articles/article-ending";
 import { ArticleShareActions } from "@/components/articles/article-share-actions";
 import { ArticleTableOfContents } from "@/components/articles/article-table-of-contents";
@@ -342,7 +342,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             <div className="mt-10 rounded-[8px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900">
               Bu içerik genel bilgilendirme amacıyla hazırlanmıştır. Somut olayınıza ilişkin hukuki değerlendirme ve profesyonel danışmanlık yerine geçmez.
             </div>
-            <ArticleDecisionFullText article={article} />
+            <DecisionPdfCard article={article} />
             <ArticleShareActions url={articleUrl} title={article.title} />
             <ArticleContactCta />
             <ArticleAuthorBox />
