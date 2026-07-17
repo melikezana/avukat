@@ -16,6 +16,12 @@ type ArticleFiltersProps = {
 
 const allCategoriesLabel = "Tümü";
 
+function getArticleDateTime(article: ArticleFiltersProps["articles"][number]) {
+  const dateTime = new Date(article.date).getTime();
+
+  return Number.isNaN(dateTime) ? 0 : dateTime;
+}
+
 export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -29,14 +35,16 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
     const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
     const activeCategorySlug = activeCategory === allCategoriesLabel ? "" : slugifyTurkish(activeCategory);
 
-    return articles.filter((article) => {
-      const matchesCategory = !activeCategorySlug || slugifyTurkish(article.category) === activeCategorySlug;
-      const focusKeyword = "focusKeyword" in article ? article.focusKeyword ?? "" : "";
-      const searchable = `${article.title} ${article.slug} ${article.summary} ${article.excerpt} ${article.category} ${focusKeyword}`.toLocaleLowerCase("tr-TR");
-      const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
+    return articles
+      .filter((article) => {
+        const matchesCategory = !activeCategorySlug || slugifyTurkish(article.category) === activeCategorySlug;
+        const focusKeyword = "focusKeyword" in article ? article.focusKeyword ?? "" : "";
+        const searchable = `${article.title} ${article.slug} ${article.summary} ${article.excerpt} ${article.category} ${focusKeyword}`.toLocaleLowerCase("tr-TR");
+        const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
 
-      return matchesCategory && matchesQuery;
-    });
+        return matchesCategory && matchesQuery;
+      })
+      .sort((a, b) => getArticleDateTime(b) - getArticleDateTime(a));
   }, [activeCategory, articles, query]);
 
   function updateCategory(nextCategory: string) {
@@ -90,11 +98,22 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
       </div>
 
       {filteredArticles.length ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredArticles.map((article) => (
-            <ArticleCard key={article.slug} article={article} />
-          ))}
-        </div>
+        <>
+          <div className="mb-8 max-w-3xl md:mb-10">
+            <h2 className="font-serif text-[30px] font-bold leading-tight text-primary md:text-4xl">
+              📌 Son Eklenenler
+            </h2>
+            <p className="mt-2 text-base leading-7 text-[#64748B] md:text-lg">
+              En yeni içtihatlar, önemli yargı kararları ve hukuki değerlendirmeler.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredArticles.map((article) => (
+              <ArticleCard key={article.slug} article={article} />
+            ))}
+          </div>
+        </>
       ) : (
         <div className="rounded-[8px] border border-primary/10 bg-background p-8 text-center">
           <p className="font-serif text-2xl font-bold text-primary">Sonuç bulunamadı</p>
