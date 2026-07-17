@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
 import { ArticleCover } from "@/components/articles/article-cover";
 import { DecisionPdfCard, type DecisionPdfArticle } from "@/components/articles/article-decision";
+import { ArticleAuthorBox, ArticleContactCta } from "@/components/articles/article-ending";
 import { Container } from "@/components/layout/container";
 import { getArticleCategoryLabel } from "@/lib/article-categories";
 import { estimateHtmlReadingTime, sanitizeArticleHtml } from "@/lib/article-html";
@@ -213,6 +214,8 @@ export default async function AdminArticlePreviewPage({ searchParams }: PreviewP
           <div lang="tr" className="article-prose prose mx-auto w-full max-w-3xl">
             <div dangerouslySetInnerHTML={{ __html: content }} />
             <DecisionPdfCard article={decisionArticle} />
+            <ArticleContactCta />
+            <ArticleAuthorBox />
           </div>
         </Container>
       </section>

@@ -12,9 +12,7 @@ import {
   Clock,
   Instagram,
   Mail,
-  MessageCircle,
   Phone,
-  Twitter,
   UserRound
 } from "lucide-react";
 import { ArticleCard } from "@/components/articles/article-card";
@@ -24,6 +22,7 @@ import { ArticleAuthorBox, ArticleContactCta } from "@/components/articles/artic
 import { ArticleShareActions } from "@/components/articles/article-share-actions";
 import { ArticleTableOfContents } from "@/components/articles/article-table-of-contents";
 import { Container } from "@/components/layout/container";
+import { BrandIconWhatsApp, BrandIconX } from "@/components/ui/brand-icons";
 import { formatReadingTime } from "@/lib/article-reading-time";
 import { enhanceHtmlHeadings, extractMdxHeadings, type ArticleHeading } from "@/lib/article-toc";
 import { getAllArticles } from "@/lib/articles";
@@ -372,7 +371,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               <p className="mt-4 text-sm leading-6 text-muted">{lawyerProfile.articleBio}</p>
               <div className="mt-4 flex gap-2">
                 {socialLinks.map((link) => {
-                  const Icon = link.label === "Instagram" ? Instagram : Twitter;
+                  const Icon = link.label === "Instagram" ? Instagram : BrandIconX;
 
                   return (
                     <a
@@ -405,10 +404,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   href={contactInfo.whatsappHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-[6px] border border-primary/10 bg-white text-primary transition hover:border-accent-2 hover:text-accent-1"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-[6px] border border-[#1f7a3d] bg-[#1f7a3d] text-white transition hover:border-[#17662f] hover:bg-[#17662f]"
                   aria-label="WhatsApp ile yaz"
                 >
-                  <MessageCircle className="h-4 w-4" aria-hidden />
+                  <BrandIconWhatsApp className="h-4 w-4" />
                 </a>
               </div>
             </div>

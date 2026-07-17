@@ -1,35 +1,41 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, MessageCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { BrandIconWhatsApp } from "@/components/ui/brand-icons";
 import { contactInfo, lawyerProfile, portraitBlurDataUrl } from "@/lib/site-profile";
 
 export function ArticleContactCta() {
   return (
-    <section className="article-cta not-prose mt-10 rounded-[8px] border border-primary/10 bg-primary p-6 text-white" aria-labelledby="article-cta-title">
-      <h2 id="article-cta-title" className="font-serif text-2xl font-bold">
+    <section
+      className="article-cta not-prose mt-10 rounded-[8px] border border-primary/20 bg-white p-6 text-primary shadow-[0_18px_50px_rgba(10,22,40,0.08)]"
+      aria-labelledby="article-cta-title"
+    >
+      <span className="mb-4 block h-1 w-12 rounded-full bg-gold-500" aria-hidden />
+      <h2 id="article-cta-title" className="whitespace-normal break-normal font-serif text-2xl font-bold text-primary [hyphens:none] [overflow-wrap:normal]">
         Somut durumunuz için hukuki değerlendirme alın
       </h2>
-      <p className="mt-3 max-w-2xl leading-7 text-white/75">
+      <p className="mt-3 max-w-2xl leading-7 text-muted">
         Her uyuşmazlık kendi olayları ve belgeleriyle değerlendirilmelidir. Genel bilgilendirme niteliğindeki bu yazı,
         hukuki danışmanlık yerine geçmez.
       </p>
-      <div className="mt-5 flex flex-wrap gap-3">
-        <Link
-          href="/iletisim"
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[6px] bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:bg-accent-2 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
-          İletişime Geç
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </Link>
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <a
           href={contactInfo.whatsappHref}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[6px] border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-accent-2 hover:text-accent-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#1f7a3d] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(31,122,61,0.18)] transition hover:bg-[#17662f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f7a3d] sm:w-auto"
+          aria-label="WhatsApp ile Yazın"
         >
-          <MessageCircle className="h-4 w-4" aria-hidden />
+          <BrandIconWhatsApp className="h-4 w-4 shrink-0" />
           WhatsApp ile Yazın
         </a>
+        <Link
+          href="/iletisim"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] border border-primary/70 bg-cream-50 px-4 py-2 text-sm font-semibold text-primary transition hover:border-gold-500 hover:text-gold-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:w-auto"
+        >
+          İletişime Geç
+          <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+        </Link>
       </div>
     </section>
   );

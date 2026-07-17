@@ -42,10 +42,9 @@ h4,
 .prose,
 .article-prose,
 .article-prose li {
-  hyphens: auto;
-  -webkit-hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  overflow-wrap: break-word;
+  hyphens: none;
+  -webkit-hyphens: none;
+  overflow-wrap: normal;
   word-break: normal;
   text-wrap: pretty;
 }
@@ -58,7 +57,7 @@ button,
 .text-balance {
   hyphens: none;
   -webkit-hyphens: none;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
   word-break: normal;
   text-wrap: balance;
 }

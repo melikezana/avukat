@@ -1,16 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpenText, GraduationCap, Scale, ShieldCheck } from "lucide-react";
-import { ArticleCard } from "@/components/articles/article-card";
+import { getRecentArticles, RecentArticlesSection } from "@/components/articles/recent-articles-section";
 import { Container } from "@/components/layout/container";
 import { Reveal } from "@/components/motion/reveal";
 import { CategoryVisual } from "@/components/site/CategoryVisual";
 import { SectionIntro } from "@/components/ui/section-intro";
-import { getAllArticles } from "@/lib/articles";
 import { getCategoryFilterHref } from "@/lib/categories";
 import { practiceAreas } from "@/lib/data/practice-areas";
 import { getLegalServiceJsonLd, getPersonJsonLd, getWebsiteJsonLd } from "@/lib/seo";
 import { lawyerProfile, portraitBlurDataUrl } from "@/lib/site-profile";
+
+export const dynamic = "force-dynamic";
 
 const trustBadges = [
   { label: "10+ Yıl Deneyim", icon: ShieldCheck },
@@ -31,8 +32,8 @@ const approachCards = [
   }
 ];
 
-export default function HomePage() {
-  const latestArticles = getAllArticles().slice(0, 3);
+export default async function HomePage() {
+  const recentArticles = await getRecentArticles();
   const jsonLd = [getWebsiteJsonLd(), getPersonJsonLd(), getLegalServiceJsonLd()];
 
   return (
@@ -119,6 +120,8 @@ export default function HomePage() {
         </Container>
       </section>
 
+      <RecentArticlesSection articles={recentArticles} />
+
       <section className="bg-white py-20">
         <Container className="grid gap-12 lg:grid-cols-[0.86fr_1.14fr]">
           <Reveal>
@@ -183,32 +186,6 @@ export default function HomePage() {
                     </div>
                   </article>
                 </Link>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
-
-      <section className="bg-white py-20">
-        <Container>
-          <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <SectionIntro
-              eyebrow="Son yazılar"
-              title="Hukuki konuları açık ve ölçülü bir dille okuyun"
-              description="Makaleler; sık karşılaşılan sorunları, temel hakları ve izlenebilecek yolları pratik örneklerle ele alır."
-            />
-            <Link
-              href="/makaleler"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-accent-1 transition hover:text-accent-2"
-            >
-              Tüm makaleler
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {latestArticles.map((article) => (
-              <Reveal key={article.slug}>
-                <ArticleCard article={article} />
               </Reveal>
             ))}
           </div>

@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Instagram, Mail, Phone, Scale, Twitter } from "lucide-react";
+import { Instagram, Mail, Phone, Scale } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { BrandIconX } from "@/components/ui/brand-icons";
 import { contactInfo, lawyerProfile, portraitBlurDataUrl, socialLinks } from "@/lib/config";
 
 const footerLinks = [
@@ -49,7 +50,7 @@ export function Footer() {
           </p>
           <div className="mt-5 flex flex-col gap-2">
             {socialLinks.map((link) => {
-              const Icon = link.label === "Instagram" ? Instagram : Twitter;
+              const Icon = link.label === "Instagram" ? Instagram : BrandIconX;
 
               return (
                 <a

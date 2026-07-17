@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Instagram, Mail, MapPin, MessageCircle, Phone, Twitter } from "lucide-react";
+import { Instagram, Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "@/components/contact/contact-form";
 import { Container } from "@/components/layout/container";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
+import { BrandIconWhatsApp, BrandIconX } from "@/components/ui/brand-icons";
 import { PageHeader } from "@/components/ui/page-header";
 import { contactInfo, socialLinks } from "@/lib/config";
 import { getGoogleMapsEmbedUrl } from "@/lib/site";
@@ -73,7 +74,7 @@ export default function ContactPage() {
               <h2 className="font-serif text-2xl font-bold text-primary">Sosyal medya</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {socialLinks.map((link) => {
-                  const Icon = link.label === "Instagram" ? Instagram : Twitter;
+                  const Icon = link.label === "Instagram" ? Instagram : BrandIconX;
 
                   return (
                     <Link
@@ -82,6 +83,7 @@ export default function ContactPage() {
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 rounded-[6px] border border-primary/10 bg-white px-3 py-2 text-sm font-semibold text-primary transition hover:border-[#B8965A] hover:text-[#B8965A] hover:underline hover:underline-offset-4"
+                      aria-label={`${link.label} profilini aç`}
                     >
                       <Icon className="h-4 w-4" aria-hidden />
                       {link.handle}
@@ -94,9 +96,10 @@ export default function ContactPage() {
               href={contactInfo.whatsappHref}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-[6px] bg-accent-1 px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-accent-2 hover:text-primary"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#1f7a3d] px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[#17662f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f7a3d]"
+              aria-label="WhatsApp ile Yazın"
             >
-              <MessageCircle className="h-4 w-4" aria-hidden />
+              <BrandIconWhatsApp className="h-4 w-4 shrink-0" />
               WhatsApp ile Yazın
             </Link>
 
