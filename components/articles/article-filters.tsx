@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { ArticleCard } from "@/components/articles/article-card";
 import type { ArticleMeta } from "@/lib/articles";
 import type { PublicArticleMeta } from "@/lib/public-articles";
-import { slugifyTurkish } from "@/lib/categories";
+import { getArticleCategoryFilterParam } from "@/lib/article-categories";
 import { cn } from "@/lib/utils";
 
 type ArticleFiltersProps = {
@@ -29,15 +29,15 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
   const [query, setQuery] = useState("");
   const categoryParam = searchParams.get("kategori");
   const activeCategory =
-    categories.find((item) => slugifyTurkish(item) === categoryParam) ?? allCategoriesLabel;
+    categories.find((item) => getArticleCategoryFilterParam(item) === categoryParam) ?? allCategoriesLabel;
 
   const filteredArticles = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
-    const activeCategorySlug = activeCategory === allCategoriesLabel ? "" : slugifyTurkish(activeCategory);
+    const activeCategorySlug = activeCategory === allCategoriesLabel ? "" : getArticleCategoryFilterParam(activeCategory);
 
     return articles
       .filter((article) => {
-        const matchesCategory = !activeCategorySlug || slugifyTurkish(article.category) === activeCategorySlug;
+        const matchesCategory = !activeCategorySlug || getArticleCategoryFilterParam(article.category) === activeCategorySlug;
         const focusKeyword = "focusKeyword" in article ? article.focusKeyword ?? "" : "";
         const searchable = `${article.title} ${article.slug} ${article.summary} ${article.excerpt} ${article.category} ${focusKeyword}`.toLocaleLowerCase("tr-TR");
         const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
@@ -53,7 +53,7 @@ export function ArticleFilters({ articles, categories }: ArticleFiltersProps) {
     if (nextCategory === allCategoriesLabel) {
       params.delete("kategori");
     } else {
-      params.set("kategori", slugifyTurkish(nextCategory));
+      params.set("kategori", getArticleCategoryFilterParam(nextCategory));
     }
 
     const nextQueryString = params.toString();

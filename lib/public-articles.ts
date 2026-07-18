@@ -1,6 +1,6 @@
 import "server-only";
 
-import { ARTICLE_CATEGORY_OPTIONS, getArticleCategoryLabel } from "@/lib/article-categories";
+import { getArticleCategoryLabel, getOrderedArticleCategoryLabels } from "@/lib/article-categories";
 import { defaultArticleAuthor } from "@/lib/article-defaults";
 import { estimateHtmlReadingTime, getPlainTextFromHtml, sanitizeArticleHtml } from "@/lib/article-html";
 import {
@@ -393,9 +393,7 @@ export async function getPublicArticleBySlug(slug: string) {
 }
 
 export function getPublicArticleCategories(articles: PublicArticleMeta[]) {
-  return Array.from(new Set([...ARTICLE_CATEGORY_OPTIONS.map((category) => category.label), ...articles.map((article) => article.category)])).sort(
-    (a, b) => a.localeCompare(b, "tr")
-  );
+  return getOrderedArticleCategoryLabels(articles.map((article) => article.category));
 }
 
 export function getRelatedArticles(article: PublicArticleMeta, articles: PublicArticleMeta[], limit = 3) {

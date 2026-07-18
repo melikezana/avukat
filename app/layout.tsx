@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Inter, Playfair_Display } from "next/font/google";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { GoogleConsentManager } from "@/components/analytics/google-consent-manager";
 import { SiteShell } from "@/components/site/site-shell";
 import { getDefaultOgImageUrl } from "@/lib/seo";
@@ -104,6 +105,7 @@ export default function RootLayout({
       <body className={cn(bodyFont.variable, displayFont.variable, "bg-background text-primary antialiased")}>
         <SiteShell>{children}</SiteShell>
         <Suspense fallback={null}>
+          <GoogleAnalytics />
           <GoogleConsentManager />
         </Suspense>
         <Analytics />

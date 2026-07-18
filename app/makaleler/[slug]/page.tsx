@@ -23,10 +23,10 @@ import { ArticleShareActions } from "@/components/articles/article-share-actions
 import { ArticleTableOfContents } from "@/components/articles/article-table-of-contents";
 import { Container } from "@/components/layout/container";
 import { BrandIconWhatsApp, BrandIconX } from "@/components/ui/brand-icons";
+import { getArticleCategoryFilterHref } from "@/lib/article-categories";
 import { formatReadingTime } from "@/lib/article-reading-time";
 import { enhanceHtmlHeadings, extractMdxHeadings, type ArticleHeading } from "@/lib/article-toc";
 import { getAllArticles } from "@/lib/articles";
-import { getCategoryFilterHref } from "@/lib/categories";
 import { formatDate } from "@/lib/format";
 import {
   getAllPublicArticleMetas,
@@ -195,7 +195,7 @@ function getBreadcrumbJsonLd(article: PublicArticle) {
         "@type": "ListItem",
         position: 3,
         name: article.category,
-        item: new URL(getCategoryFilterHref(article.category), getPublicSiteUrl()).toString()
+        item: new URL(getArticleCategoryFilterHref(article.category), getPublicSiteUrl()).toString()
       },
       {
         "@type": "ListItem",
@@ -261,7 +261,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </li>
             <li className="inline-flex items-center gap-2">
               <ChevronRight className="h-4 w-4 text-accent-1" aria-hidden />
-              <Link href={getCategoryFilterHref(article.category)} className="transition hover:text-accent-1">
+              <Link href={getArticleCategoryFilterHref(article.category)} className="transition hover:text-accent-1">
                 {article.category}
               </Link>
             </li>

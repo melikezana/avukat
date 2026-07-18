@@ -6,8 +6,10 @@ import { ArticleDeleteButton } from "@/components/admin/article-delete-button";
 import { ArticleStatusButton } from "@/components/admin/article-status-button";
 import {
   ARTICLE_CATEGORY_OPTIONS,
+  getArticleCategoryFilterValues,
   getArticleCategoryLabel,
   isArticleCategorySlug,
+  normalizeArticleCategory,
   type ArticleCategorySlug
 } from "@/lib/article-categories";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -73,7 +75,8 @@ function getActiveStatus(status?: string): ArticleStatus | null {
 }
 
 function getActiveCategory(category?: string): ArticleCategorySlug | "" {
-  return category && isArticleCategorySlug(category) ? category : "";
+  const normalizedCategory = normalizeArticleCategory(category);
+  return normalizedCategory && isArticleCategorySlug(normalizedCategory) ? normalizedCategory : "";
 }
 
 function getActiveSort(sort?: string): SortOption {
@@ -199,7 +202,7 @@ async function getArticles({
   }
 
   if (category) {
-    request = request.eq("category", category);
+    request = request.in("category", getArticleCategoryFilterValues(category));
   }
 
   const escapedQuery = escapeSearchTerm(query);

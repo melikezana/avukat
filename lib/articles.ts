@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import { ARTICLE_CATEGORY_OPTIONS } from "@/lib/article-categories";
+import { getArticleCategoryLabel, getOrderedArticleCategoryLabels } from "@/lib/article-categories";
 import { defaultArticleAuthor } from "@/lib/article-defaults";
 import { estimateReadingMinutesFromText } from "@/lib/article-reading-time";
 
@@ -43,8 +43,6 @@ export type Article = ArticleMeta & {
 type ArticleRecord = Article & {
   sourceSlug: string;
 };
-
-const priorityFilterCategories = ARTICLE_CATEGORY_OPTIONS.map((category) => category.label);
 
 function estimateReadingTime(content: string) {
   return estimateReadingMinutesFromText(content);
@@ -109,7 +107,7 @@ function readArticleRecord(fileName: string): ArticleRecord {
     date: frontmatter.date,
     summary,
     excerpt,
-    category: frontmatter.category,
+    category: getArticleCategoryLabel(frontmatter.category),
     coverImage,
     coverImageExists: publicAssetExists(coverImage),
     readingTime: parseReadingTime(frontmatter.readingTime, content),
@@ -146,7 +144,5 @@ export function getArticleBySlug(slug: string): Article | null {
 }
 
 export function getArticleCategories(articles = getAllArticles()) {
-  return Array.from(new Set([...priorityFilterCategories, ...articles.map((article) => article.category)])).sort(
-    (a, b) => a.localeCompare(b, "tr")
-  );
+  return getOrderedArticleCategoryLabels(articles.map((article) => article.category));
 }
