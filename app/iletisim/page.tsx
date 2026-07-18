@@ -4,6 +4,7 @@ import { Instagram, Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "@/components/contact/contact-form";
 import { Container } from "@/components/layout/container";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
+import { getActionButtonClassName, whatsappIconClassName } from "@/components/ui/action-button-variants";
 import { BrandIconWhatsApp, BrandIconX } from "@/components/ui/brand-icons";
 import { PageHeader } from "@/components/ui/page-header";
 import { contactInfo, socialLinks } from "@/lib/config";
@@ -96,10 +97,10 @@ export default function ContactPage() {
               href={contactInfo.whatsappHref}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#1f7a3d] px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[#17662f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f7a3d]"
+              className={getActionButtonClassName("whatsapp")}
               aria-label="WhatsApp ile Yazın"
             >
-              <BrandIconWhatsApp className="h-4 w-4 shrink-0" />
+              <BrandIconWhatsApp className={whatsappIconClassName} />
               WhatsApp ile Yazın
             </Link>
 

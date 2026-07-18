@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { getActionButtonClassName, whatsappIconClassName } from "@/components/ui/action-button-variants";
 import { BrandIconWhatsApp } from "@/components/ui/brand-icons";
 import { contactInfo, lawyerProfile, portraitBlurDataUrl } from "@/lib/site-profile";
 
@@ -23,15 +24,15 @@ export function ArticleContactCta() {
           href={contactInfo.whatsappHref}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#1f7a3d] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(31,122,61,0.18)] transition hover:bg-[#17662f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f7a3d] sm:w-auto"
+          className={getActionButtonClassName("whatsapp", "sm:w-auto")}
           aria-label="WhatsApp ile Yazın"
         >
-          <BrandIconWhatsApp className="h-4 w-4 shrink-0" />
+          <BrandIconWhatsApp className={whatsappIconClassName} />
           WhatsApp ile Yazın
         </a>
         <Link
           href="/iletisim"
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] border border-primary/70 bg-cream-50 px-4 py-2 text-sm font-semibold text-primary transition hover:border-gold-500 hover:text-gold-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:w-auto"
+          className={getActionButtonClassName("secondary", "sm:w-auto")}
         >
           İletişime Geç
           <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />

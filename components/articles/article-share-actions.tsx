@@ -2,6 +2,7 @@
 
 import { Check, Link as LinkIcon, Linkedin, Printer } from "lucide-react";
 import { useState } from "react";
+import { getActionButtonClassName, whatsappIconClassName } from "@/components/ui/action-button-variants";
 import { BrandIconWhatsApp, BrandIconX } from "@/components/ui/brand-icons";
 
 type ArticleShareActionsProps = {
@@ -9,9 +10,7 @@ type ArticleShareActionsProps = {
   title: string;
 };
 
-const baseButtonClassName =
-  "inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 rounded-[6px] border px-3 py-2 text-center text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 whitespace-normal break-normal [hyphens:none] [overflow-wrap:normal]";
-const secondaryButtonClassName = `${baseButtonClassName} border-primary/15 bg-white text-primary hover:border-gold-500 hover:text-gold-600 focus-visible:outline-primary`;
+const secondaryButtonClassName = getActionButtonClassName("secondary");
 
 export function ArticleShareActions({ url, title }: ArticleShareActionsProps) {
   const [message, setMessage] = useState("");
@@ -45,17 +44,17 @@ export function ArticleShareActions({ url, title }: ArticleShareActionsProps) {
           href={`https://wa.me/?text=${encodedText}`}
           target="_blank"
           rel="noreferrer"
-          className={`${baseButtonClassName} border-[#1f7a3d] bg-[#1f7a3d] text-white hover:bg-[#17662f] focus-visible:outline-[#1f7a3d]`}
+          className={getActionButtonClassName("whatsapp")}
           aria-label="WhatsApp ile paylaş"
         >
-          <BrandIconWhatsApp className="h-4 w-4 shrink-0" />
+          <BrandIconWhatsApp className={whatsappIconClassName} />
           WhatsApp
         </a>
         <a
           href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
           target="_blank"
           rel="noreferrer"
-          className={`${baseButtonClassName} border-[#2f6f9f]/30 bg-[#eef6fb] text-[#1f5f8f] hover:border-[#1f5f8f] hover:bg-white focus-visible:outline-[#1f5f8f]`}
+          className={secondaryButtonClassName}
           aria-label="LinkedIn üzerinde paylaş"
         >
           <Linkedin className="h-4 w-4 shrink-0" aria-hidden />
@@ -65,7 +64,7 @@ export function ArticleShareActions({ url, title }: ArticleShareActionsProps) {
           href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`}
           target="_blank"
           rel="noreferrer"
-          className={`${baseButtonClassName} border-primary/20 bg-white text-primary hover:border-gold-500 hover:text-gold-600 focus-visible:outline-primary`}
+          className={secondaryButtonClassName}
           aria-label="X'te paylaş"
         >
           <BrandIconX className="h-4 w-4 shrink-0" />X
