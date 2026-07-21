@@ -9,6 +9,7 @@ export const ARTICLE_CATEGORY_OPTIONS = [
   { value: "icra-iflas-hukuku", label: "İcra ve İflas Hukuku" },
   { value: "kira-hukuku", label: "Kira Hukuku", aliases: ["kira"] },
   { value: "ticaret-hukuku", label: "Ticaret Hukuku", aliases: ["ticaret"] },
+  { value: "sigorta-hukuku", label: "Sigorta Hukuku" },
   { value: "vergi-hukuku", label: "Vergi Hukuku" },
   { value: "anayasa-mahkemesi-kararlari", label: "Anayasa Mahkemesi Kararları" },
   { value: "danistay-kararlari", label: "Danıştay Kararları" },
