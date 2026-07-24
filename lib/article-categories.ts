@@ -13,7 +13,8 @@ export const ARTICLE_CATEGORY_OPTIONS = [
   { value: "vergi-hukuku", label: "Vergi Hukuku" },
   { value: "anayasa-mahkemesi-kararlari", label: "Anayasa Mahkemesi Kararları" },
   { value: "danistay-kararlari", label: "Danıştay Kararları" },
-  { value: "gayrimenkul-hukuku", label: "Gayrimenkul Hukuku", aliases: ["gayrimenkul"] }
+  { value: "gayrimenkul-hukuku", label: "Gayrimenkul Hukuku", aliases: ["gayrimenkul"] },
+  { value: "miras-hukuku", label: "Miras Hukuku", aliases: ["miras"] }
 ] as const;
 
 export type ArticleCategorySlug = (typeof ARTICLE_CATEGORY_OPTIONS)[number]["value"];
