@@ -2,6 +2,8 @@ import sanitizeHtml from "sanitize-html";
 import { estimateReadingMinutesFromText } from "@/lib/article-reading-time";
 
 const allowedTextAlignments = [/^left$/, /^center$/, /^right$/];
+const alignedBlockAttributes = ["style", "class"];
+const contentClassAttributes = ["class"];
 
 export function sanitizeArticleHtml(html: string) {
   return sanitizeHtml(html, {
@@ -27,11 +29,19 @@ export function sanitizeArticleHtml(html: string) {
       "code"
     ],
     allowedAttributes: {
-      a: ["href", "name", "target", "rel", "title"],
-      img: ["src", "alt", "title", "width", "height", "loading"],
-      p: ["style"],
-      h2: ["style"],
-      h3: ["style"]
+      a: ["href", "name", "target", "rel", "title", "class"],
+      img: ["src", "alt", "title", "width", "height", "loading", "class"],
+      p: alignedBlockAttributes,
+      h2: alignedBlockAttributes,
+      h3: alignedBlockAttributes,
+      ul: contentClassAttributes,
+      ol: contentClassAttributes,
+      li: contentClassAttributes,
+      blockquote: contentClassAttributes,
+      hr: contentClassAttributes,
+      pre: contentClassAttributes,
+      code: contentClassAttributes,
+      br: contentClassAttributes
     },
     allowedStyles: {
       p: {
@@ -50,8 +60,13 @@ export function sanitizeArticleHtml(html: string) {
     },
     allowProtocolRelative: false,
     transformTags: {
-      a: sanitizeHtml.simpleTransform("a", {
-        rel: "noopener noreferrer"
+      a: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          ...attribs,
+          rel: "noopener noreferrer",
+          target: "_blank"
+        }
       }),
       img: (tagName, attribs) => ({
         tagName,

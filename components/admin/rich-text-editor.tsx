@@ -29,9 +29,9 @@ import ImageExtension from "@tiptap/extension-image";
 import LinkExtension from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
-import { EditorContent, useEditor, type Editor } from "@tiptap/react";
+import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -67,9 +67,51 @@ type ToolbarButtonProps = {
   label: string;
   title?: string;
   icon: LucideIcon;
-  onClick: () => void;
+  onAction: () => void;
   active?: boolean;
   disabled?: boolean;
+};
+
+type ImageInsertPosition = number | { from: number; to: number };
+
+type ToolbarState = {
+  canUndo: boolean;
+  canRedo: boolean;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strike: boolean;
+  paragraph: boolean;
+  heading2: boolean;
+  heading3: boolean;
+  bulletList: boolean;
+  orderedList: boolean;
+  blockquote: boolean;
+  link: boolean;
+  alignLeft: boolean;
+  alignCenter: boolean;
+  alignRight: boolean;
+  codeBlock: boolean;
+};
+
+const emptyToolbarState: ToolbarState = {
+  canUndo: false,
+  canRedo: false,
+  bold: false,
+  italic: false,
+  underline: false,
+  strike: false,
+  paragraph: false,
+  heading2: false,
+  heading3: false,
+  bulletList: false,
+  orderedList: false,
+  blockquote: false,
+  link: false,
+  alignLeft: false,
+  alignCenter: false,
+  alignRight: false,
+  codeBlock: false
 };
 
 function formatBytes(bytes: number) {
@@ -151,6 +193,11 @@ function sanitizePastedHtml(html: string) {
         element.removeAttribute(attribute.name);
       }
     });
+
+    if (element.tagName.toLowerCase() === "a" && element.getAttribute("href")) {
+      element.setAttribute("target", "_blank");
+      element.setAttribute("rel", "noopener noreferrer");
+    }
   });
 
   return documentFragment.body.innerHTML;
@@ -172,7 +219,7 @@ function validateImageFile(file: File) {
   return "";
 }
 
-function ToolbarButton({ label, title, icon: Icon, onClick, active, disabled }: ToolbarButtonProps) {
+function ToolbarButton({ label, title, icon: Icon, onAction, active, disabled }: ToolbarButtonProps) {
   return (
     <button
       type="button"
@@ -180,7 +227,10 @@ function ToolbarButton({ label, title, icon: Icon, onClick, active, disabled }: 
       title={title ?? label}
       aria-pressed={active}
       disabled={disabled}
-      onClick={onClick}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        onAction();
+      }}
       className={cn(
         "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] border text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)] disabled:cursor-not-allowed disabled:opacity-40",
         active
@@ -206,6 +256,7 @@ function run(editor: Editor | null, callback: (editor: Editor) => void) {
 export function RichTextEditor({ id, value, onChange, onUploadStateChange, error }: RichTextEditorProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingImageInsertPositionRef = useRef<ImageInsertPosition | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [altText, setAltText] = useState("");
   const [modalError, setModalError] = useState("");
@@ -226,12 +277,21 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
     }
   }
 
+  function getSelectionInsertPosition(selection: { from: number; to: number }): ImageInsertPosition {
+    return selection.from === selection.to ? selection.from : { from: selection.from, to: selection.to };
+  }
+
+  function getImageInsertPosition(currentEditor: Editor): ImageInsertPosition {
+    return getSelectionInsertPosition(currentEditor.state.selection);
+  }
+
   function openImageAltForm(file: File) {
     const validationMessage = validateImageFile(file);
 
     if (validationMessage) {
       setUploadError(validationMessage);
       setMessage("");
+      pendingImageInsertPositionRef.current = null;
       resetImageInput();
       return;
     }
@@ -243,12 +303,14 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
     setMessage("");
   }
 
-  const editor = useEditor({
-    extensions: [
+  const editorExtensions = useMemo(
+    () => [
       StarterKit.configure({
         heading: {
           levels: [2, 3]
-        }
+        },
+        link: false,
+        underline: false
       }),
       Underline,
       LinkExtension.configure({
@@ -270,7 +332,13 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
         alignments: ["left", "center", "right"]
       })
     ],
+    []
+  );
+
+  const editor = useEditor({
+    extensions: editorExtensions,
     content: value || "<p></p>",
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         "aria-label": "Makale içeriği",
@@ -278,7 +346,7 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
           "article-prose min-h-[450px] w-full max-w-none px-4 py-4 focus-visible:outline-none [&_img]:mx-auto [&_img]:my-6 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-[8px] [&_img]:border [&_img]:border-primary/10"
       },
       transformPastedHTML: sanitizePastedHtml,
-      handleDrop: (_view, event, _slice, moved) => {
+      handleDrop: (view, event, _slice, moved) => {
         if (moved) {
           return false;
         }
@@ -290,6 +358,8 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
         }
 
         event.preventDefault();
+        const dropPosition = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        pendingImageInsertPositionRef.current = dropPosition ? dropPosition.pos : getSelectionInsertPosition(view.state.selection);
         openImageAltForm(file);
         return true;
       }
@@ -298,6 +368,36 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
       onChange(updatedEditor.getHTML());
     }
   });
+
+  const toolbarState =
+    useEditorState({
+      editor,
+      selector: ({ editor: currentEditor }) => {
+        if (!currentEditor) {
+          return emptyToolbarState;
+        }
+
+        return {
+          canUndo: currentEditor.can().undo(),
+          canRedo: currentEditor.can().redo(),
+          bold: currentEditor.isActive("bold"),
+          italic: currentEditor.isActive("italic"),
+          underline: currentEditor.isActive("underline"),
+          strike: currentEditor.isActive("strike"),
+          paragraph: currentEditor.isActive("paragraph"),
+          heading2: currentEditor.isActive("heading", { level: 2 }),
+          heading3: currentEditor.isActive("heading", { level: 3 }),
+          bulletList: currentEditor.isActive("bulletList"),
+          orderedList: currentEditor.isActive("orderedList"),
+          blockquote: currentEditor.isActive("blockquote"),
+          link: currentEditor.isActive("link"),
+          alignLeft: currentEditor.isActive({ textAlign: "left" }),
+          alignCenter: currentEditor.isActive({ textAlign: "center" }),
+          alignRight: currentEditor.isActive({ textAlign: "right" }),
+          codeBlock: currentEditor.isActive("codeBlock")
+        };
+      }
+    }) ?? emptyToolbarState;
 
   useEffect(() => {
     if (!editor || editor.getHTML() === value) {
@@ -310,10 +410,15 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
   function setLink() {
     run(editor, (currentEditor) => {
       const previousUrl = currentEditor.getAttributes("link").href as string | undefined;
-      const nextUrl = normalizeUrl(window.prompt("Bağlantı URL'si", previousUrl ?? "") ?? "");
+      const promptValue = window.prompt("Bağlantı URL'si", previousUrl ?? "");
+
+      if (promptValue === null) {
+        return;
+      }
+
+      const nextUrl = normalizeUrl(promptValue);
 
       if (!nextUrl) {
-        currentEditor.chain().focus().unsetLink().run();
         return;
       }
 
@@ -322,7 +427,12 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
         return;
       }
 
-      currentEditor.chain().focus().extendMarkRange("link").setLink({ href: nextUrl }).run();
+      currentEditor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: nextUrl, target: "_blank", rel: "noopener noreferrer" })
+        .run();
     });
   }
 
@@ -364,19 +474,24 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
       const response = getUploadResponse(request.responseText);
 
       if (request.status >= 200 && request.status < 300 && response?.ok) {
-        editor
-          .chain()
-          .focus()
-          .setImage({
-            src: response.file.href,
-            alt: trimmedAltText,
-            title: trimmedAltText
-          })
-          .run();
+        const imageAttributes = {
+          src: response.file.href,
+          alt: trimmedAltText,
+          title: trimmedAltText
+        };
+        const insertPosition = pendingImageInsertPositionRef.current;
+
+        if (insertPosition !== null) {
+          editor.chain().focus().insertContentAt(insertPosition, { type: "image", attrs: imageAttributes }).run();
+        } else {
+          editor.chain().focus().setImage(imageAttributes).run();
+        }
+
         setProgress(100);
         setMessage("Görsel yüklendi ve içeriğe eklendi.");
         setPendingImage(null);
         setAltText("");
+        pendingImageInsertPositionRef.current = null;
         resetImageInput();
       } else {
         setMessage("");
@@ -428,7 +543,14 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
 
     event.preventDefault();
     setIsDragging(false);
+    if (editor) {
+      pendingImageInsertPositionRef.current = getImageInsertPosition(editor);
+    }
     openImageAltForm(file);
+  }
+
+  if (!editor) {
+    return null;
   }
 
   return (
@@ -444,118 +566,131 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
         onDrop={handleDrop}
       >
         <div className="sticky top-0 z-10 flex gap-1 overflow-x-auto border-b border-[#eadcc5] bg-[#fffaf0] p-2">
-          <ToolbarButton label="Geri al" icon={Undo2} onClick={() => run(editor, (item) => item.chain().focus().undo().run())} />
-          <ToolbarButton label="İleri al" icon={Redo2} onClick={() => run(editor, (item) => item.chain().focus().redo().run())} />
+          <ToolbarButton
+            label="Geri al"
+            icon={Undo2}
+            disabled={!toolbarState.canUndo}
+            onAction={() => run(editor, (item) => item.chain().focus().undo().run())}
+          />
+          <ToolbarButton
+            label="İleri al"
+            icon={Redo2}
+            disabled={!toolbarState.canRedo}
+            onAction={() => run(editor, (item) => item.chain().focus().redo().run())}
+          />
           <ToolbarDivider />
           <ToolbarButton
             label="Kalın"
             icon={Bold}
-            active={editor?.isActive("bold")}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleBold().run())}
+            active={toolbarState.bold}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleBold().run())}
           />
           <ToolbarButton
             label="İtalik"
             icon={Italic}
-            active={editor?.isActive("italic")}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleItalic().run())}
+            active={toolbarState.italic}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleItalic().run())}
           />
           <ToolbarButton
             label="Altı çizili"
             icon={UnderlineIcon}
-            active={editor?.isActive("underline")}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleUnderline().run())}
+            active={toolbarState.underline}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleUnderline().run())}
           />
           <ToolbarButton
             label="Üstü çizili"
             icon={Strikethrough}
-            active={editor?.isActive("strike")}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleStrike().run())}
+            active={toolbarState.strike}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleStrike().run())}
           />
           <ToolbarDivider />
           <ToolbarButton
             label="Normal paragraf"
             icon={Pilcrow}
-            active={editor?.isActive("paragraph")}
-            onClick={() => run(editor, (item) => item.chain().focus().setParagraph().run())}
+            active={toolbarState.paragraph}
+            onAction={() => run(editor, (item) => item.chain().focus().setParagraph().run())}
           />
           <ToolbarButton
             label="H2"
             icon={Heading2}
-            active={editor?.isActive("heading", { level: 2 })}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleHeading({ level: 2 }).run())}
+            active={toolbarState.heading2}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleHeading({ level: 2 }).run())}
           />
           <ToolbarButton
             label="H3"
             icon={Heading3}
-            active={editor?.isActive("heading", { level: 3 })}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleHeading({ level: 3 }).run())}
+            active={toolbarState.heading3}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleHeading({ level: 3 }).run())}
           />
           <ToolbarDivider />
           <ToolbarButton
             label="Madde işaretli liste"
             icon={List}
-            active={editor?.isActive("bulletList")}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleBulletList().run())}
+            active={toolbarState.bulletList}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleBulletList().run())}
           />
           <ToolbarButton
             label="Numaralı liste"
             icon={ListOrdered}
-            active={editor?.isActive("orderedList")}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleOrderedList().run())}
+            active={toolbarState.orderedList}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleOrderedList().run())}
           />
           <ToolbarButton
             label="Alıntı"
             icon={Quote}
-            active={editor?.isActive("blockquote")}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleBlockquote().run())}
+            active={toolbarState.blockquote}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleBlockquote().run())}
           />
           <ToolbarButton
             label="Yatay çizgi"
             icon={Minus}
-            onClick={() => run(editor, (item) => item.chain().focus().setHorizontalRule().run())}
+            onAction={() => run(editor, (item) => item.chain().focus().setHorizontalRule().run())}
           />
           <ToolbarDivider />
-          <ToolbarButton label="Bağlantı ekle" icon={Link2} active={editor?.isActive("link")} onClick={setLink} />
+          <ToolbarButton label="Bağlantı ekle" icon={Link2} active={toolbarState.link} onAction={setLink} />
           <ToolbarButton
             label="Bağlantıyı kaldır"
             icon={Unlink}
-            onClick={() => run(editor, (item) => item.chain().focus().unsetLink().run())}
+            onAction={() => run(editor, (item) => item.chain().focus().extendMarkRange("link").unsetLink().run())}
           />
           <ToolbarButton
             label="Sola hizala"
             icon={AlignLeft}
-            active={editor?.isActive({ textAlign: "left" })}
-            onClick={() => run(editor, (item) => item.chain().focus().setTextAlign("left").run())}
+            active={toolbarState.alignLeft}
+            onAction={() => run(editor, (item) => item.chain().focus().setTextAlign("left").run())}
           />
           <ToolbarButton
             label="Ortala"
             icon={AlignCenter}
-            active={editor?.isActive({ textAlign: "center" })}
-            onClick={() => run(editor, (item) => item.chain().focus().setTextAlign("center").run())}
+            active={toolbarState.alignCenter}
+            onAction={() => run(editor, (item) => item.chain().focus().setTextAlign("center").run())}
           />
           <ToolbarButton
             label="Sağa hizala"
             icon={AlignRight}
-            active={editor?.isActive({ textAlign: "right" })}
-            onClick={() => run(editor, (item) => item.chain().focus().setTextAlign("right").run())}
+            active={toolbarState.alignRight}
+            onAction={() => run(editor, (item) => item.chain().focus().setTextAlign("right").run())}
           />
           <ToolbarDivider />
           <ToolbarButton
             label="Kod bloğu"
             icon={Code2}
-            active={editor?.isActive("codeBlock")}
-            onClick={() => run(editor, (item) => item.chain().focus().toggleCodeBlock().run())}
+            active={toolbarState.codeBlock}
+            onAction={() => run(editor, (item) => item.chain().focus().toggleCodeBlock().run())}
           />
           <ToolbarButton
             label="İçerik içi görsel ekle"
             icon={ImagePlus}
             disabled={isUploading}
-            onClick={() => inputRef.current?.click()}
+            onAction={() => {
+              pendingImageInsertPositionRef.current = getImageInsertPosition(editor);
+              inputRef.current?.click();
+            }}
           />
           <ToolbarButton
             label="Tüm biçimlendirmeyi temizle"
             icon={Eraser}
-            onClick={() => run(editor, (item) => item.chain().focus().unsetAllMarks().clearNodes().run())}
+            onAction={() => run(editor, (item) => item.chain().focus().unsetAllMarks().clearNodes().run())}
           />
         </div>
 
@@ -613,6 +748,7 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
                   setPendingImage(null);
                   setAltText("");
                   setModalError("");
+                  pendingImageInsertPositionRef.current = null;
                   resetImageInput();
                 }}
                 className="inline-flex min-h-10 items-center justify-center rounded-[6px] border border-[#d8c7a8] bg-white px-4 py-2 text-sm font-bold text-[var(--color-navy)] transition hover:border-[#c8a45d] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
