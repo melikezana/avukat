@@ -25,19 +25,22 @@ import {
   Undo2,
   Unlink
 } from "lucide-react";
-import ImageExtension from "@tiptap/extension-image";
 import LinkExtension from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  ArticleContentImageExtension,
+  contentImageAllowedTypes as allowedImageTypes,
+  contentImageMaxAltTextLength as maxAltTextLength,
+  contentImageMaxUploadSizeBytes as maxUploadSizeBytes,
+  type UploadedContentImage
+} from "@/components/admin/article-content-image-extension";
 import { cn } from "@/lib/utils";
 
-const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
-const maxUploadSizeBytes = 5 * 1024 * 1024;
 const contentImageFolder = "article-content";
-const maxAltTextLength = 160;
 
 type UploadResponse =
   | {
@@ -92,12 +95,6 @@ type PendingContentImage = {
   path?: string;
 };
 
-type UploadedContentImage = {
-  publicUrl: string;
-  alt: string;
-  path: string;
-};
-
 type ToolbarState = {
   canUndo: boolean;
   canRedo: boolean;
@@ -137,45 +134,6 @@ const emptyToolbarState: ToolbarState = {
   alignRight: false,
   codeBlock: false
 };
-
-const ImageWithSafeAttributes = ImageExtension.extend({
-  addAttributes() {
-    return {
-      src: {
-        default: null
-      },
-      alt: {
-        default: null
-      },
-      title: {
-        default: null
-      },
-      width: {
-        default: null
-      },
-      height: {
-        default: null
-      },
-      loading: {
-        default: "lazy",
-        parseHTML: (element) => element.getAttribute("loading") || "lazy",
-        renderHTML: (attributes) => ({
-          loading: attributes.loading || "lazy"
-        })
-      },
-      class: {
-        default: null,
-        parseHTML: (element) => element.getAttribute("class"),
-        renderHTML: (attributes) => (attributes.class ? { class: attributes.class } : {})
-      },
-      style: {
-        default: null,
-        parseHTML: (element) => element.getAttribute("style"),
-        renderHTML: (attributes) => (attributes.style ? { style: attributes.style } : {})
-      }
-    };
-  }
-});
 
 function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -467,10 +425,10 @@ export function RichTextEditor({
     ? Math.round(pendingImages.reduce((total, image) => total + image.progress, 0) / pendingImages.length)
     : 0;
 
-  function setUploadingState(nextState: boolean) {
+  const setUploadingState = useCallback((nextState: boolean) => {
     setIsUploading(nextState);
     onUploadStateChange?.(nextState);
-  }
+  }, [onUploadStateChange]);
 
   function resetImageInput() {
     if (inputRef.current) {
@@ -542,6 +500,76 @@ export function RichTextEditor({
     }
   }
 
+  const uploadContentImageFile = useCallback(
+    (file: File, alt: string, onProgress?: (progress: number) => void) =>
+      new Promise<UploadedContentImage>((resolve, reject) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", contentImageFolder);
+        formData.append("scopeId", contentImageScopeId);
+        formData.append("alt", alt);
+
+        const request = new XMLHttpRequest();
+
+        request.upload.onprogress = (event) => {
+          if (!event.lengthComputable) {
+            onProgress?.(15);
+            return;
+          }
+
+          onProgress?.(Math.min(95, Math.round((event.loaded / event.total) * 90)));
+        };
+
+        request.onload = () => {
+          const response = getUploadResponse(request.responseText);
+
+          if (request.status >= 200 && request.status < 300 && response?.ok) {
+            resolve({
+              publicUrl: response.file.href,
+              alt,
+              path: response.file.path
+            });
+            return;
+          }
+
+          reject(new Error(getUploadErrorMessage(response) || "Görsel yüklenemedi. Lütfen tekrar deneyin."));
+        };
+
+        request.onerror = () => {
+          reject(new Error("Bağlantı sırasında hata oluştu. Lütfen tekrar deneyin."));
+        };
+
+        request.onabort = () => {
+          reject(new Error("Görsel yükleme iptal edildi."));
+        };
+
+        request.open("POST", "/api/admin/upload");
+        request.withCredentials = true;
+        request.send(formData);
+      }),
+    [contentImageScopeId]
+  );
+
+  const uploadEditorImageFile = useCallback(
+    async (file: File, alt: string, context: "replace" | "crop") => {
+      const safeAlt = sanitizeAltText(alt) || createAltTextFromFileName(file.name);
+
+      setUploadingState(true);
+      setUploadError("");
+      setMessage(context === "crop" ? "Görsel kırpılıyor ve yükleniyor..." : "Görsel güncelleniyor...");
+
+      try {
+        return await uploadContentImageFile(file, safeAlt);
+      } catch (error) {
+        setUploadError(error instanceof Error ? error.message : "Görsel yüklenemedi");
+        throw error;
+      } finally {
+        setUploadingState(false);
+      }
+    },
+    [setUploadingState, uploadContentImageFile]
+  );
+
   const editorExtensions = useMemo(
     () => [
       StarterKit.configure({
@@ -562,19 +590,22 @@ export function RichTextEditor({
           target: "_blank"
         }
       }),
-      ImageWithSafeAttributes.configure({
+      ArticleContentImageExtension.configure({
         allowBase64: false,
         inline: false,
         HTMLAttributes: {
           loading: "lazy"
-        }
+        },
+        uploadImage: uploadEditorImageFile,
+        onMessage: setMessage,
+        onError: setUploadError
       }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
         alignments: ["left", "center", "right"]
       })
     ],
-    []
+    [uploadEditorImageFile]
   );
 
   const editor = useEditor({
@@ -584,8 +615,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         "aria-label": "Makale içeriği",
-        class:
-          "article-prose min-h-[450px] w-full max-w-none px-4 py-4 focus-visible:outline-none [&_img]:mx-auto [&_img]:my-6 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-[12px] [&_img]:border [&_img]:border-primary/10"
+        class: "article-prose min-h-[450px] w-full max-w-none px-4 py-4 focus-visible:outline-none"
       },
       transformPastedHTML: sanitizePastedHtml,
       handleDrop: (view, event, _slice, moved) => {
@@ -679,57 +709,13 @@ export function RichTextEditor({
   }
 
   function uploadContentImage(image: PendingContentImage) {
-    return new Promise<UploadedContentImage>((resolve, reject) => {
-      const alt = getUploadAltText(image);
-      const formData = new FormData();
-      formData.append("file", image.file);
-      formData.append("folder", contentImageFolder);
-      formData.append("scopeId", contentImageScopeId);
-      formData.append("alt", alt);
+    const alt = getUploadAltText(image);
 
-      const request = new XMLHttpRequest();
-
-      request.upload.onprogress = (event) => {
-        if (!event.lengthComputable) {
-          updatePendingImage(image.id, (currentImage) => ({
-            ...currentImage,
-            progress: currentImage.progress < 15 ? 15 : currentImage.progress
-          }));
-          return;
-        }
-
-        updatePendingImage(image.id, (currentImage) => ({
-          ...currentImage,
-          progress: Math.min(95, Math.round((event.loaded / event.total) * 90))
-        }));
-      };
-
-      request.onload = () => {
-        const response = getUploadResponse(request.responseText);
-
-        if (request.status >= 200 && request.status < 300 && response?.ok) {
-          resolve({
-            publicUrl: response.file.href,
-            alt,
-            path: response.file.path
-          });
-          return;
-        }
-
-        reject(new Error(getUploadErrorMessage(response) || "Görsel yüklenemedi. Lütfen tekrar deneyin."));
-      };
-
-      request.onerror = () => {
-        reject(new Error("Bağlantı sırasında hata oluştu. Lütfen tekrar deneyin."));
-      };
-
-      request.onabort = () => {
-        reject(new Error("Görsel yükleme iptal edildi."));
-      };
-
-      request.open("POST", "/api/admin/upload");
-      request.withCredentials = true;
-      request.send(formData);
+    return uploadContentImageFile(image.file, alt, (progress) => {
+      updatePendingImage(image.id, (currentImage) => ({
+        ...currentImage,
+        progress: currentImage.progress < progress ? progress : currentImage.progress
+      }));
     });
   }
 
@@ -745,7 +731,10 @@ export function RichTextEditor({
           src: image.publicUrl,
           alt: image.alt,
           title: image.alt,
-          loading: "lazy"
+          loading: "lazy",
+          width: "85%",
+          alignment: "center",
+          storagePath: image.path
         }
       },
       {
@@ -1159,3 +1148,4 @@ export function RichTextEditor({
     </div>
   );
 }
+
