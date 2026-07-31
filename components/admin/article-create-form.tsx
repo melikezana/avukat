@@ -142,6 +142,14 @@ function getArticlePreviewHref(articleId: string, fields: ArticleFormFields) {
   return `/admin/makaleler/onizleme?${params.toString()}`;
 }
 
+function createContentImageDraftId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `draft-${crypto.randomUUID()}`;
+  }
+
+  return `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function SubmitButton({ intent, disabled, mode }: SubmitButtonProps) {
   const { pending } = useFormStatus();
   const isDisabled = pending || disabled;
@@ -260,6 +268,9 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
   const [isPdfUploading, setIsPdfUploading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [contentImageScopeId] = useState(() =>
+    mode === "edit" && articleId ? String(articleId) : createContentImageDraftId()
+  );
 
   const isUploading = isCoverUploading || isContentUploading || isPdfUploading;
 
@@ -496,6 +507,7 @@ export function ArticleCreateForm({ mode = "create", articleId, initialFields }:
           <RichTextEditor
             id="article-content-editor"
             value={fields.content}
+            contentImageScopeId={contentImageScopeId}
             onChange={(value) => updateField("content", value)}
             onUploadStateChange={setIsContentUploading}
             error={contentError}

@@ -163,9 +163,10 @@ a {
   width: auto;
   max-width: 100%;
   height: auto;
-  margin: 2rem auto;
+  margin: 1.5rem auto;
   border: 1px solid rgba(10, 22, 40, 0.1);
-  border-radius: 8px;
+  border-radius: 12px;
+  object-fit: contain;
 }
 
 .article-prose hr {
@@ -195,6 +196,13 @@ a {
   background: transparent;
   padding: 0;
   color: inherit;
+}
+
+@media (max-width: 640px) {
+  .article-prose img {
+    margin: 1.25rem auto;
+    border-radius: 10px;
+  }
 }
 
 @media print {

@@ -2,6 +2,11 @@ import sanitizeHtml from "sanitize-html";
 import { estimateReadingMinutesFromText } from "@/lib/article-reading-time";
 
 const allowedTextAlignments = [/^left$/, /^center$/, /^right$/];
+const cssLengthValue = "(?:0|auto|\\d+(?:\\.\\d+)?(?:px|%|rem|em|vw|vh))";
+const allowedImageCssValues = [
+  new RegExp(`^${cssLengthValue}(?:\\s+${cssLengthValue}){0,3}$`, "i"),
+  /^calc\([0-9+\-*/.\s%pxrememvwvh]+\)$/i
+];
 const alignedBlockAttributes = ["style", "class"];
 const contentClassAttributes = ["class"];
 
@@ -30,7 +35,7 @@ export function sanitizeArticleHtml(html: string) {
     ],
     allowedAttributes: {
       a: ["href", "name", "target", "rel", "title", "class"],
-      img: ["src", "alt", "title", "width", "height", "loading", "class"],
+      img: ["src", "alt", "title", "width", "height", "loading", "class", "style"],
       p: alignedBlockAttributes,
       h2: alignedBlockAttributes,
       h3: alignedBlockAttributes,
@@ -52,6 +57,18 @@ export function sanitizeArticleHtml(html: string) {
       },
       h3: {
         "text-align": allowedTextAlignments
+      },
+      img: {
+        display: [/^block$/, /^inline-block$/, /^inline$/],
+        width: allowedImageCssValues,
+        "max-width": allowedImageCssValues,
+        height: allowedImageCssValues,
+        margin: allowedImageCssValues,
+        "margin-top": allowedImageCssValues,
+        "margin-right": allowedImageCssValues,
+        "margin-bottom": allowedImageCssValues,
+        "margin-left": allowedImageCssValues,
+        "border-radius": allowedImageCssValues
       }
     },
     allowedSchemes: ["http", "https", "mailto", "tel"],

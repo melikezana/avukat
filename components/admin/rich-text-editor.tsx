@@ -36,11 +36,14 @@ import { cn } from "@/lib/utils";
 
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 const maxUploadSizeBytes = 5 * 1024 * 1024;
+const contentImageFolder = "article-content";
+const maxAltTextLength = 160;
 
 type UploadResponse =
   | {
       ok: true;
       file: {
+        name?: string;
         href: string;
         path: string;
         size: number;
@@ -58,6 +61,7 @@ type UploadResponse =
 type RichTextEditorProps = {
   id: string;
   value: string;
+  contentImageScopeId: string;
   onChange: (value: string) => void;
   onUploadStateChange?: (isUploading: boolean) => void;
   error?: string;
@@ -73,6 +77,26 @@ type ToolbarButtonProps = {
 };
 
 type ImageInsertPosition = number | { from: number; to: number };
+
+type PendingContentImageStatus = "ready" | "uploading" | "success" | "error";
+
+type PendingContentImage = {
+  id: string;
+  file: File;
+  fingerprint: string;
+  alt: string;
+  status: PendingContentImageStatus;
+  progress: number;
+  error?: string;
+  publicUrl?: string;
+  path?: string;
+};
+
+type UploadedContentImage = {
+  publicUrl: string;
+  alt: string;
+  path: string;
+};
 
 type ToolbarState = {
   canUndo: boolean;
@@ -114,8 +138,164 @@ const emptyToolbarState: ToolbarState = {
   codeBlock: false
 };
 
+const ImageWithSafeAttributes = ImageExtension.extend({
+  addAttributes() {
+    return {
+      src: {
+        default: null
+      },
+      alt: {
+        default: null
+      },
+      title: {
+        default: null
+      },
+      width: {
+        default: null
+      },
+      height: {
+        default: null
+      },
+      loading: {
+        default: "lazy",
+        parseHTML: (element) => element.getAttribute("loading") || "lazy",
+        renderHTML: (attributes) => ({
+          loading: attributes.loading || "lazy"
+        })
+      },
+      class: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("class"),
+        renderHTML: (attributes) => (attributes.class ? { class: attributes.class } : {})
+      },
+      style: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("style"),
+        renderHTML: (attributes) => (attributes.style ? { style: attributes.style } : {})
+      }
+    };
+  }
+});
+
 function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function createClientId(prefix: string) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getFileFingerprint(file: File) {
+  return [file.name, file.type, file.size, file.lastModified].join(":");
+}
+
+function sanitizeAltText(value: string) {
+  return value
+    .normalize("NFKC")
+    .replace(/[\u0000-\u001f\u007f<>`{}[\]\\|^~]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxAltTextLength);
+}
+
+function createAltTextFromFileName(fileName: string) {
+  const withoutExtension = fileName.replace(/\.[^/.]+$/, "");
+  const readableName = withoutExtension.replace(/[_-]+/g, " ");
+
+  return sanitizeAltText(readableName) || "Makale içi görsel";
+}
+
+function getUploadAltText(image: PendingContentImage) {
+  return sanitizeAltText(image.alt) || createAltTextFromFileName(image.file.name);
+}
+
+function getRejectedImagesMessage(messages: string[]) {
+  if (messages.length <= 3) {
+    return messages.join(" ");
+  }
+
+  return `${messages.slice(0, 3).join(" ")} ${messages.length - 3} dosya daha reddedildi.`;
+}
+
+function getImageStatusText(image: PendingContentImage) {
+  if (image.status === "uploading") {
+    return `%${image.progress} yüklendi`;
+  }
+
+  if (image.status === "success") {
+    return "Yüklendi";
+  }
+
+  if (image.status === "error") {
+    return image.error || "Yüklenemedi";
+  }
+
+  return "Yüklemeye hazır";
+}
+
+function getImageStatusClassName(status: PendingContentImageStatus) {
+  if (status === "success") {
+    return "text-emerald-700";
+  }
+
+  if (status === "error") {
+    return "text-red-700";
+  }
+
+  return "text-[var(--color-navy)]";
+}
+
+function getSafeImageStyle(value: string) {
+  const allowedProperties = new Set([
+    "display",
+    "width",
+    "max-width",
+    "height",
+    "margin",
+    "margin-top",
+    "margin-right",
+    "margin-bottom",
+    "margin-left",
+    "border-radius"
+  ]);
+  const cssLengthValue = "(?:0|auto|\\d+(?:\\.\\d+)?(?:px|%|rem|em|vw|vh))";
+  const cssLengthListPattern = new RegExp(`^${cssLengthValue}(?:\\s+${cssLengthValue}){0,3}$`, "i");
+  const cssCalcPattern = /^calc\([0-9+\-*/.\s%pxrememvwvh]+\)$/i;
+  const safeRules = value
+    .split(";")
+    .map((rule) => rule.trim())
+    .filter(Boolean)
+    .map((rule) => {
+      const separatorIndex = rule.indexOf(":");
+
+      if (separatorIndex === -1) {
+        return "";
+      }
+
+      const property = rule.slice(0, separatorIndex).trim().toLowerCase();
+      const propertyValue = rule.slice(separatorIndex + 1).trim();
+
+      if (!allowedProperties.has(property) || /url\s*\(|expression\s*\(/i.test(propertyValue)) {
+        return "";
+      }
+
+      if (property === "display" && !/^(block|inline-block|inline)$/i.test(propertyValue)) {
+        return "";
+      }
+
+      if (property !== "display" && !cssLengthListPattern.test(propertyValue) && !cssCalcPattern.test(propertyValue)) {
+        return "";
+      }
+
+      return `${property}: ${propertyValue}`;
+    })
+    .filter(Boolean);
+
+  return safeRules.join("; ");
 }
 
 function getUploadResponse(responseText: string): UploadResponse | null {
@@ -178,6 +358,18 @@ function sanitizePastedHtml(html: string) {
       }
 
       if (name === "style") {
+        if (element.tagName.toLowerCase() === "img") {
+          const safeImageStyle = getSafeImageStyle(value);
+
+          if (safeImageStyle) {
+            element.setAttribute("style", safeImageStyle);
+          } else {
+            element.removeAttribute(attribute.name);
+          }
+
+          return;
+        }
+
         const textAlign = value.match(/text-align\s*:\s*(left|center|right)/i)?.[1]?.toLowerCase();
 
         if (textAlign) {
@@ -253,18 +445,27 @@ function run(editor: Editor | null, callback: (editor: Editor) => void) {
   }
 }
 
-export function RichTextEditor({ id, value, onChange, onUploadStateChange, error }: RichTextEditorProps) {
+export function RichTextEditor({
+  id,
+  value,
+  contentImageScopeId,
+  onChange,
+  onUploadStateChange,
+  error
+}: RichTextEditorProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingImageInsertPositionRef = useRef<ImageInsertPosition | null>(null);
-  const [pendingImage, setPendingImage] = useState<File | null>(null);
-  const [altText, setAltText] = useState("");
+  const [pendingImages, setPendingImages] = useState<PendingContentImage[]>([]);
   const [modalError, setModalError] = useState("");
   const [message, setMessage] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const pendingUploadCount = pendingImages.filter((image) => image.status === "ready" || image.status === "error").length;
+  const aggregateProgress = pendingImages.length
+    ? Math.round(pendingImages.reduce((total, image) => total + image.progress, 0) / pendingImages.length)
+    : 0;
 
   function setUploadingState(nextState: boolean) {
     setIsUploading(nextState);
@@ -285,22 +486,60 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
     return getSelectionInsertPosition(currentEditor.state.selection);
   }
 
-  function openImageAltForm(file: File) {
-    const validationMessage = validateImageFile(file);
+  function updatePendingImage(id: string, updater: (image: PendingContentImage) => PendingContentImage) {
+    setPendingImages((currentImages) => currentImages.map((image) => (image.id === id ? updater(image) : image)));
+  }
 
-    if (validationMessage) {
-      setUploadError(validationMessage);
-      setMessage("");
-      pendingImageInsertPositionRef.current = null;
-      resetImageInput();
-      return;
+  function updatePendingImageAlt(id: string, alt: string) {
+    updatePendingImage(id, (image) => ({
+      ...image,
+      alt: alt.slice(0, maxAltTextLength),
+      error: undefined,
+      status: image.status === "error" ? "ready" : image.status
+    }));
+    setModalError("");
+  }
+
+  function openImageAltForm(files: File[]) {
+    const seenFingerprints = new Set<string>();
+    const rejectedMessages: string[] = [];
+    const validImages: PendingContentImage[] = [];
+
+    for (const file of files) {
+      const fingerprint = getFileFingerprint(file);
+
+      if (seenFingerprints.has(fingerprint)) {
+        rejectedMessages.push(`${file.name}: Bu seçimde aynı görsel tekrarlandı.`);
+        continue;
+      }
+
+      seenFingerprints.add(fingerprint);
+
+      const validationMessage = validateImageFile(file);
+
+      if (validationMessage) {
+        rejectedMessages.push(`${file.name}: ${validationMessage}`);
+        continue;
+      }
+
+      validImages.push({
+        id: createClientId("content-image"),
+        file,
+        fingerprint,
+        alt: createAltTextFromFileName(file.name),
+        status: "ready",
+        progress: 0
+      });
     }
 
-    setPendingImage(file);
-    setAltText("");
+    setPendingImages(validImages);
     setModalError("");
-    setUploadError("");
+    setUploadError(rejectedMessages.length ? getRejectedImagesMessage(rejectedMessages) : "");
     setMessage("");
+
+    if (validImages.length === 0) {
+      pendingImageInsertPositionRef.current = null;
+    }
   }
 
   const editorExtensions = useMemo(
@@ -323,9 +562,12 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
           target: "_blank"
         }
       }),
-      ImageExtension.configure({
+      ImageWithSafeAttributes.configure({
         allowBase64: false,
-        inline: false
+        inline: false,
+        HTMLAttributes: {
+          loading: "lazy"
+        }
       }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
@@ -343,7 +585,7 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
       attributes: {
         "aria-label": "Makale içeriği",
         class:
-          "article-prose min-h-[450px] w-full max-w-none px-4 py-4 focus-visible:outline-none [&_img]:mx-auto [&_img]:my-6 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-[8px] [&_img]:border [&_img]:border-primary/10"
+          "article-prose min-h-[450px] w-full max-w-none px-4 py-4 focus-visible:outline-none [&_img]:mx-auto [&_img]:my-6 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-[12px] [&_img]:border [&_img]:border-primary/10"
       },
       transformPastedHTML: sanitizePastedHtml,
       handleDrop: (view, event, _slice, moved) => {
@@ -351,16 +593,16 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
           return false;
         }
 
-        const file = event.dataTransfer?.files?.[0];
+        const files = Array.from(event.dataTransfer?.files ?? []);
 
-        if (!file || !file.type.startsWith("image/")) {
+        if (!files.some((file) => file.type.startsWith("image/"))) {
           return false;
         }
 
         event.preventDefault();
         const dropPosition = view.posAtCoords({ left: event.clientX, top: event.clientY });
         pendingImageInsertPositionRef.current = dropPosition ? dropPosition.pos : getSelectionInsertPosition(view.state.selection);
-        openImageAltForm(file);
+        openImageAltForm(files);
         return true;
       }
     },
@@ -436,94 +678,197 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
     });
   }
 
-  function uploadPendingImage() {
-    if (!pendingImage || !editor) {
-      return;
-    }
+  function uploadContentImage(image: PendingContentImage) {
+    return new Promise<UploadedContentImage>((resolve, reject) => {
+      const alt = getUploadAltText(image);
+      const formData = new FormData();
+      formData.append("file", image.file);
+      formData.append("folder", contentImageFolder);
+      formData.append("scopeId", contentImageScopeId);
+      formData.append("alt", alt);
 
-    const trimmedAltText = altText.trim();
+      const request = new XMLHttpRequest();
 
-    if (!trimmedAltText) {
-      setModalError("İçerik görseli için alt metin zorunludur.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", pendingImage);
-    formData.append("folder", "article-content");
-    formData.append("alt", trimmedAltText);
-
-    const request = new XMLHttpRequest();
-
-    setUploadingState(true);
-    setProgress(0);
-    setModalError("");
-    setUploadError("");
-    setMessage("Görsel yükleniyor...");
-
-    request.upload.onprogress = (event) => {
-      if (!event.lengthComputable) {
-        setProgress((currentProgress) => (currentProgress < 15 ? 15 : currentProgress));
-        return;
-      }
-
-      setProgress(Math.min(95, Math.round((event.loaded / event.total) * 90)));
-    };
-
-    request.onload = () => {
-      const response = getUploadResponse(request.responseText);
-
-      if (request.status >= 200 && request.status < 300 && response?.ok) {
-        const imageAttributes = {
-          src: response.file.href,
-          alt: trimmedAltText,
-          title: trimmedAltText
-        };
-        const insertPosition = pendingImageInsertPositionRef.current;
-
-        if (insertPosition !== null) {
-          editor.chain().focus().insertContentAt(insertPosition, { type: "image", attrs: imageAttributes }).run();
-        } else {
-          editor.chain().focus().setImage(imageAttributes).run();
+      request.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          updatePendingImage(image.id, (currentImage) => ({
+            ...currentImage,
+            progress: currentImage.progress < 15 ? 15 : currentImage.progress
+          }));
+          return;
         }
 
-        setProgress(100);
-        setMessage("Görsel yüklendi ve içeriğe eklendi.");
-        setPendingImage(null);
-        setAltText("");
-        pendingImageInsertPositionRef.current = null;
-        resetImageInput();
-      } else {
-        setMessage("");
-        setModalError(getUploadErrorMessage(response) || "Görsel yüklenemedi. Lütfen tekrar deneyin.");
+        updatePendingImage(image.id, (currentImage) => ({
+          ...currentImage,
+          progress: Math.min(95, Math.round((event.loaded / event.total) * 90))
+        }));
+      };
+
+      request.onload = () => {
+        const response = getUploadResponse(request.responseText);
+
+        if (request.status >= 200 && request.status < 300 && response?.ok) {
+          resolve({
+            publicUrl: response.file.href,
+            alt,
+            path: response.file.path
+          });
+          return;
+        }
+
+        reject(new Error(getUploadErrorMessage(response) || "Görsel yüklenemedi. Lütfen tekrar deneyin."));
+      };
+
+      request.onerror = () => {
+        reject(new Error("Bağlantı sırasında hata oluştu. Lütfen tekrar deneyin."));
+      };
+
+      request.onabort = () => {
+        reject(new Error("Görsel yükleme iptal edildi."));
+      };
+
+      request.open("POST", "/api/admin/upload");
+      request.withCredentials = true;
+      request.send(formData);
+    });
+  }
+
+  function insertUploadedImages(uploadedImages: UploadedContentImage[]) {
+    if (!editor || uploadedImages.length === 0) {
+      return;
+    }
+
+    const content = uploadedImages.flatMap((image) => [
+      {
+        type: "image",
+        attrs: {
+          src: image.publicUrl,
+          alt: image.alt,
+          title: image.alt,
+          loading: "lazy"
+        }
+      },
+      {
+        type: "paragraph"
       }
+    ]);
+    const insertPosition = pendingImageInsertPositionRef.current;
 
-      setUploadingState(false);
-    };
+    if (insertPosition !== null) {
+      editor.chain().focus().insertContentAt(insertPosition, content).run();
+    } else {
+      editor.chain().focus().insertContent(content).run();
+    }
+  }
 
-    request.onerror = () => {
-      setMessage("");
-      setModalError("Bağlantı sırasında hata oluştu. Lütfen tekrar deneyin.");
-      setUploadingState(false);
-    };
+  async function uploadPendingImages() {
+    if (!editor || isUploading) {
+      return;
+    }
 
-    request.onabort = () => {
-      setMessage("");
-      setModalError("Görsel yükleme iptal edildi.");
-      setUploadingState(false);
-    };
+    const imagesToUpload = pendingImages.filter((image) => image.status === "ready" || image.status === "error");
 
-    request.open("POST", "/api/admin/upload");
-    request.withCredentials = true;
-    request.send(formData);
+    if (imagesToUpload.length === 0) {
+      return;
+    }
+
+    const finalImages = [...pendingImages];
+    const uploadedImages: UploadedContentImage[] = [];
+
+    setUploadingState(true);
+    setModalError("");
+    setUploadError("");
+    setMessage(`${imagesToUpload.length} görsel yükleniyor...`);
+
+    for (const image of imagesToUpload) {
+      updatePendingImage(image.id, (currentImage) => ({
+        ...currentImage,
+        status: "uploading",
+        progress: 0,
+        error: undefined
+      }));
+
+      try {
+        const uploadedImage = await uploadContentImage(image);
+        uploadedImages.push(uploadedImage);
+        const finalImageIndex = finalImages.findIndex((item) => item.id === image.id);
+
+        if (finalImageIndex >= 0) {
+          finalImages[finalImageIndex] = {
+            ...finalImages[finalImageIndex],
+            status: "success",
+            progress: 100,
+            publicUrl: uploadedImage.publicUrl,
+            path: uploadedImage.path
+          };
+        }
+
+        updatePendingImage(image.id, (currentImage) => ({
+          ...currentImage,
+          status: "success",
+          progress: 100,
+          publicUrl: uploadedImage.publicUrl,
+          path: uploadedImage.path
+        }));
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Görsel yüklenemedi. Lütfen tekrar deneyin.";
+        const finalImageIndex = finalImages.findIndex((item) => item.id === image.id);
+
+        if (finalImageIndex >= 0) {
+          finalImages[finalImageIndex] = {
+            ...finalImages[finalImageIndex],
+            status: "error",
+            progress: 0,
+            error: errorMessage
+          };
+        }
+
+        updatePendingImage(image.id, (currentImage) => ({
+          ...currentImage,
+          status: "error",
+          progress: 0,
+          error: errorMessage
+        }));
+      }
+    }
+
+    const failedImages = finalImages.filter((image) => image.status === "error");
+    const successCount = uploadedImages.length;
+    const failureCount = failedImages.length;
+
+    if (successCount > 0) {
+      insertUploadedImages(uploadedImages);
+      pendingImageInsertPositionRef.current = null;
+    }
+
+    if (failureCount > 0) {
+      setPendingImages(failedImages);
+      setModalError(`${failureCount} görsel yüklenemedi. Başarısız dosyaları yeniden deneyebilir veya pencereyi kapatabilirsiniz.`);
+    } else {
+      setPendingImages([]);
+      setModalError("");
+    }
+
+    if (successCount > 0 && failureCount > 0) {
+      setMessage(`${successCount} görsel içeriğe eklendi, ${failureCount} görsel yüklenemedi.`);
+    } else if (successCount > 0) {
+      setMessage(`${successCount} görsel içeriğe eklendi.`);
+    } else {
+      setMessage("Görseller yüklenemedi. Lütfen listedeki hataları kontrol edin.");
+    }
+
+    setUploadingState(false);
+    resetImageInput();
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files ?? []);
 
-    if (file) {
-      openImageAltForm(file);
+    if (files.length > 0) {
+      openImageAltForm(files);
     }
+
+    resetImageInput();
   }
 
   function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
@@ -534,9 +879,9 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
-    const file = event.dataTransfer.files?.[0];
+    const files = Array.from(event.dataTransfer.files ?? []);
 
-    if (!file || !file.type.startsWith("image/")) {
+    if (!files.some((file) => file.type.startsWith("image/"))) {
       setIsDragging(false);
       return;
     }
@@ -546,7 +891,7 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
     if (editor) {
       pendingImageInsertPositionRef.current = getImageInsertPosition(editor);
     }
-    openImageAltForm(file);
+    openImageAltForm(files);
   }
 
   if (!editor) {
@@ -679,7 +1024,8 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
             onAction={() => run(editor, (item) => item.chain().focus().toggleCodeBlock().run())}
           />
           <ToolbarButton
-            label="İçerik içi görsel ekle"
+            label="İçeriğe görsel ekle"
+            title="İçeriğe görsel ekle"
             icon={ImagePlus}
             disabled={isUploading}
             onAction={() => {
@@ -701,52 +1047,94 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
           id={inputId}
           type="file"
           accept={allowedImageTypes.join(",")}
+          multiple
+          hidden
           onChange={handleFileChange}
-          className="sr-only"
         />
       </div>
 
       <div className="mt-2 min-h-6" aria-live="polite">
         {message ? <p className="text-sm font-semibold text-emerald-700">{message}</p> : null}
         {uploadError ? <p className="text-sm font-semibold text-red-700">{uploadError}</p> : null}
-        {isUploading ? <p className="text-sm font-semibold text-[var(--color-navy)]">%{progress} yüklendi</p> : null}
+        {isUploading ? <p className="text-sm font-semibold text-[var(--color-navy)]">%{aggregateProgress} yüklendi</p> : null}
       </div>
 
-      {pendingImage ? (
+      {pendingImages.length > 0 ? (
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="content-image-alt-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#07111f]/65 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#07111f]/65 p-4"
         >
-          <div className="w-full max-w-md rounded-[8px] border border-[#d8c7a8] bg-[#fffaf0] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.24)]">
+          <div className="my-6 w-full max-w-2xl rounded-[8px] border border-[#d8c7a8] bg-[#fffaf0] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.24)]">
             <h3 id="content-image-alt-title" className="font-display text-xl font-bold text-[var(--color-navy)]">
-              Görsel alt metni
+              İçerik görselleri
             </h3>
             <p className="mt-2 text-sm leading-6 text-[#5f5a52]">
-              İçerik görselleri erişilebilirlik ve SEO için açıklayıcı alt metinle eklenir.
+              {pendingImages.length} görsel seçildi. Alt metinleri düzenleyebilir veya boş bırakırsanız dosya adından güvenli
+              metin üretilebilir.
             </p>
-            <label htmlFor="content-image-alt" className="mt-4 block text-sm font-semibold text-[var(--color-navy)]">
-              Alt metin
-            </label>
-            <input
-              id="content-image-alt"
-              value={altText}
-              onChange={(event) => {
-                setAltText(event.target.value);
-                setModalError("");
-              }}
-              disabled={isUploading}
-              className="mt-2 min-h-11 w-full rounded-[6px] border border-[#d8c7a8] bg-white px-3 py-2 text-sm text-[var(--color-navy)] focus:border-[#c8a45d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
-            />
+
+            <div className="mt-4 max-h-[55vh] space-y-3 overflow-y-auto pr-1">
+              {pendingImages.map((image, index) => {
+                const altInputId = `${inputId}-${image.id}-alt`;
+
+                return (
+                  <div key={image.id} className="rounded-[8px] border border-[#eadcc5] bg-white p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold text-[var(--color-navy)]">
+                          {index + 1}. {image.file.name}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold text-[#6c6254]">
+                          {formatBytes(image.file.size)} · {image.file.type}
+                        </p>
+                      </div>
+                      <p className={cn("text-xs font-bold", getImageStatusClassName(image.status))}>
+                        {getImageStatusText(image)}
+                      </p>
+                    </div>
+
+                    <label htmlFor={altInputId} className="mt-3 block text-sm font-semibold text-[var(--color-navy)]">
+                      Alt metin
+                    </label>
+                    <input
+                      id={altInputId}
+                      value={image.alt}
+                      maxLength={maxAltTextLength}
+                      onChange={(event) => updatePendingImageAlt(image.id, event.target.value)}
+                      disabled={isUploading || image.status === "success"}
+                      className="mt-2 min-h-11 w-full rounded-[6px] border border-[#d8c7a8] bg-white px-3 py-2 text-sm text-[var(--color-navy)] focus:border-[#c8a45d] disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
+                    />
+
+                    {image.status === "uploading" ? (
+                      <div
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={image.progress}
+                        aria-label={`${image.file.name} yükleme ilerlemesi`}
+                        className="mt-3 h-2 overflow-hidden rounded-full bg-[#eadcc5]"
+                      >
+                        <div className="h-full rounded-full bg-[var(--color-gold)] transition-all" style={{ width: `${image.progress}%` }} />
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+
             {modalError ? <p className="mt-2 text-sm font-semibold text-red-700">{modalError}</p> : null}
+            <p className="mt-3 text-xs leading-5 text-[#6c6254]">
+              İçerikten sildiğiniz görseller storage’dan otomatik kaldırılmaz; riskli orphan cleanup için medya kütüphanesindeki
+              kullanım kontrolünü kullanın.
+            </p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 disabled={isUploading}
                 onClick={() => {
-                  setPendingImage(null);
-                  setAltText("");
+                  setPendingImages([]);
                   setModalError("");
                   pendingImageInsertPositionRef.current = null;
                   resetImageInput();
@@ -757,12 +1145,12 @@ export function RichTextEditor({ id, value, onChange, onUploadStateChange, error
               </button>
               <button
                 type="button"
-                disabled={isUploading}
-                onClick={uploadPendingImage}
+                disabled={isUploading || pendingUploadCount === 0}
+                onClick={uploadPendingImages}
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[6px] bg-[var(--color-navy)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--color-navy-deep)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gold)]"
               >
                 {isUploading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <ImagePlus className="h-4 w-4" aria-hidden />}
-                Görseli ekle
+                {pendingUploadCount > 1 ? `${pendingUploadCount} görseli ekle` : "Görseli ekle"}
               </button>
             </div>
           </div>

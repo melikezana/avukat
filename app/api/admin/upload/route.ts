@@ -18,6 +18,12 @@ const allowedTypes: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp"
 };
+const contentImageScopeIdSchema = z
+  .string()
+  .trim()
+  .min(1, "İçerik görseli kapsamı zorunludur.")
+  .max(120, "İçerik görseli kapsamı çok uzun.")
+  .regex(/^[a-zA-Z0-9_-]+$/, "İçerik görseli kapsamı geçersiz.");
 
 const uploadSchema = z.object({
   file: z
@@ -30,10 +36,11 @@ const uploadSchema = z.object({
     ),
   title: z.string().trim().max(120).optional(),
   folder: z.enum([articleCoverFolder, articleContentFolder]).default(articleCoverFolder),
-  alt: z.string().trim().max(160).optional()
-}).refine((value) => value.folder !== articleContentFolder || Boolean(value.alt), {
-  message: "İçerik görseli için alt metin zorunludur.",
-  path: ["alt"]
+  alt: z.string().trim().max(160).optional(),
+  scopeId: contentImageScopeIdSchema.optional()
+}).refine((value) => value.folder !== articleContentFolder || Boolean(value.scopeId), {
+  message: "İçerik görseli kapsamı zorunludur.",
+  path: ["scopeId"]
 });
 
 type StorageUploadError = {
@@ -43,8 +50,13 @@ type StorageUploadError = {
   statusCode?: number | string;
 };
 
-function createStoragePath(fileType: string, folder: string) {
+function createStoragePath(fileType: string, folder: string, scopeId?: string) {
   const extension = allowedTypes[fileType];
+
+  if (folder === articleContentFolder) {
+    return `${folder}/${scopeId}/${Date.now()}-${randomUUID()}.${extension}`;
+  }
+
   return `${folder}/${Date.now()}-${randomUUID()}.${extension}`;
 }
 
@@ -148,7 +160,8 @@ export async function POST(request: Request) {
       file: formData.get("file"),
       title: formData.get("title") || undefined,
       folder: formData.get("folder") || articleCoverFolder,
-      alt: formData.get("alt") || undefined
+      alt: formData.get("alt") || undefined,
+      scopeId: formData.get("scopeId") || undefined
     });
 
     if (!parsed.success) {
@@ -162,7 +175,7 @@ export async function POST(request: Request) {
       return bucketErrorResponse;
     }
 
-    const storagePath = createStoragePath(parsed.data.file.type, parsed.data.folder);
+    const storagePath = createStoragePath(parsed.data.file.type, parsed.data.folder, parsed.data.scopeId);
     const storageFileName = storagePath.split("/").pop() ?? storagePath;
     const fileBuffer = Buffer.from(await parsed.data.file.arrayBuffer());
     const { error: uploadError } = await storageSupabase.storage.from(articleImageBucket).upload(storagePath, fileBuffer, {
