@@ -1,47 +1,22 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { validationErrorResponse } from "@/lib/api/responses";
+import type { ZodError } from "zod";
 import { adminUnauthorizedResponse } from "@/lib/admin/request";
 import { consumeRateLimit, isSameOriginRequest } from "@/lib/admin/security";
+import {
+  articleContentFolder,
+  articleCoverFolder,
+  articleImageBucket,
+  getUploadReceivedFields,
+  getUploadTextField,
+  uploadFieldsSchema,
+  validateArticleImageFile,
+  type ArticleImageFileValidationResult
+} from "@/lib/admin/upload-validation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
-
-const articleImageBucket = "article-images";
-const articleCoverFolder = "article-covers";
-const articleContentFolder = "article-content";
-const maxUploadSizeBytes = 5 * 1024 * 1024;
-const allowedTypes: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp"
-};
-const contentImageScopeIdSchema = z
-  .string()
-  .trim()
-  .min(1, "İçerik görseli kapsamı zorunludur.")
-  .max(120, "İçerik görseli kapsamı çok uzun.")
-  .regex(/^[a-zA-Z0-9_-]+$/, "İçerik görseli kapsamı geçersiz.");
-
-const uploadSchema = z.object({
-  file: z
-    .custom<File>((value) => value instanceof File, "Görsel dosyası zorunludur.")
-    .refine((file) => file.size > 0, "Boş dosya yüklenemez.")
-    .refine((file) => file.size <= maxUploadSizeBytes, "Görsel en fazla 5 MB olabilir.")
-    .refine(
-      (file) => Object.prototype.hasOwnProperty.call(allowedTypes, file.type),
-      "Sadece jpg, png veya webp yüklenebilir."
-    ),
-  title: z.string().trim().max(120).optional(),
-  folder: z.enum([articleCoverFolder, articleContentFolder]).default(articleCoverFolder),
-  alt: z.string().trim().max(160).optional(),
-  scopeId: contentImageScopeIdSchema.optional()
-}).refine((value) => value.folder !== articleContentFolder || Boolean(value.scopeId), {
-  message: "İçerik görseli kapsamı zorunludur.",
-  path: ["scopeId"]
-});
 
 type StorageUploadError = {
   error?: string;
@@ -50,9 +25,7 @@ type StorageUploadError = {
   statusCode?: number | string;
 };
 
-function createStoragePath(fileType: string, folder: string, scopeId?: string) {
-  const extension = allowedTypes[fileType];
-
+function createStoragePath(extension: string, folder: string, scopeId?: string) {
   if (folder === articleContentFolder) {
     return `${folder}/${scopeId}/${Date.now()}-${randomUUID()}.${extension}`;
   }
@@ -79,16 +52,97 @@ function logStorageError(scope: string, error: StorageUploadError, extra?: Recor
   });
 }
 
+function logUploadValidationError(scope: string, details: Record<string, unknown>) {
+  if (process.env.NODE_ENV !== "production") {
+    console.error(`[admin.upload.validation.${scope}]`, details);
+  }
+}
+
+function validationIssues(error: ZodError) {
+  return error.issues.map((issue) => ({
+    path: issue.path.join("."),
+    message: issue.message
+  }));
+}
+
+function uploadValidationErrorResponse(validationError: ZodError, formData: FormData) {
+  const details = validationError.flatten?.() ?? String(validationError);
+  const receivedFields = getUploadReceivedFields(formData);
+
+  logUploadValidationError("fields", {
+    receivedFields,
+    details
+  });
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Geçersiz yükleme isteği",
+      message: "Geçersiz yükleme isteği",
+      details,
+      issues: validationIssues(validationError)
+    },
+    { status: 400 }
+  );
+}
+
+function missingFileResponse(formData: FormData) {
+  const details = {
+    receivedFields: getUploadReceivedFields(formData)
+  };
+
+  logUploadValidationError("file.missing", details);
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Dosya alanı bulunamadı.",
+      message: "Dosya alanı bulunamadı.",
+      details
+    },
+    { status: 400 }
+  );
+}
+
+function fileValidationErrorResponse(result: Extract<ArticleImageFileValidationResult, { ok: false }>, formData: FormData) {
+  const details = {
+    fieldErrors: result.fieldErrors,
+    formErrors: [],
+    receivedFields: getUploadReceivedFields(formData),
+    file: result.file
+  };
+
+  logUploadValidationError("file", details);
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Geçersiz yükleme isteği",
+      message: "Geçersiz yükleme isteği",
+      details,
+      issues: [
+        {
+          path: "file",
+          message: result.message
+        }
+      ]
+    },
+    { status: 400 }
+  );
+}
+
 async function ensureArticleImageBucket(storageSupabase: ReturnType<typeof createSupabaseAdminClient>) {
   const { data: bucket, error } = await storageSupabase.storage.getBucket(articleImageBucket);
 
   if (error) {
     logStorageError("bucket", error, { bucket: articleImageBucket });
+    const message = getStorageErrorMessage(error, `${articleImageBucket} bucket erişimi doğrulanamadı.`);
 
     return NextResponse.json(
       {
         ok: false,
-        message: getStorageErrorMessage(error, `${articleImageBucket} bucket erişimi doğrulanamadı.`)
+        error: message,
+        message
       },
       { status: getStorageErrorStatus(error) }
     );
@@ -98,7 +152,7 @@ async function ensureArticleImageBucket(storageSupabase: ReturnType<typeof creat
     const message = `${articleImageBucket} bucket bulunamadı.`;
     console.error("[admin.upload.storage.bucket]", { bucket: articleImageBucket, message });
 
-    return NextResponse.json({ ok: false, message }, { status: 404 });
+    return NextResponse.json({ ok: false, error: message, message }, { status: 404 });
   }
 
   if (!bucket.public) {
@@ -109,7 +163,7 @@ async function ensureArticleImageBucket(storageSupabase: ReturnType<typeof creat
       message
     });
 
-    return NextResponse.json({ ok: false, message }, { status: 500 });
+    return NextResponse.json({ ok: false, error: message, message }, { status: 500 });
   }
 
   return null;
@@ -126,10 +180,13 @@ function getUnexpectedUploadErrorMessage(error: unknown) {
 export async function POST(request: Request) {
   try {
     if (!isSameOriginRequest(request.headers)) {
+      const message = "Görsel şu anda yüklenemiyor. Lütfen sayfayı yenileyip tekrar deneyin.";
+
       return NextResponse.json(
         {
           ok: false,
-          message: "Görsel şu anda yüklenemiyor. Lütfen sayfayı yenileyip tekrar deneyin."
+          error: message,
+          message
         },
         { status: 403 }
       );
@@ -146,26 +203,47 @@ export async function POST(request: Request) {
     }
 
     if (!consumeRateLimit(`article-upload:${user.id}`, { limit: 20, windowMs: 60_000 })) {
+      const message = "Çok kısa sürede çok fazla görsel yükleme denemesi yapıldı. Lütfen biraz sonra tekrar deneyin.";
+
       return NextResponse.json(
         {
           ok: false,
-          message: "Çok kısa sürede çok fazla görsel yükleme denemesi yapıldı. Lütfen biraz sonra tekrar deneyin."
+          error: message,
+          message
         },
         { status: 429 }
       );
     }
 
     const formData = await request.formData();
-    const parsed = uploadSchema.safeParse({
-      file: formData.get("file"),
-      title: formData.get("title") || undefined,
-      folder: formData.get("folder") || articleCoverFolder,
-      alt: formData.get("alt") || undefined,
-      scopeId: formData.get("scopeId") || undefined
+    const file = formData.get("file");
+
+    if (!(file instanceof File)) {
+      return missingFileResponse(formData);
+    }
+
+    const parsed = uploadFieldsSchema.safeParse({
+      title: getUploadTextField(formData, "title"),
+      folder: getUploadTextField(formData, "folder") ?? articleCoverFolder,
+      alt: getUploadTextField(formData, "alt"),
+      scopeId: getUploadTextField(formData, "scopeId")
     });
 
     if (!parsed.success) {
-      return validationErrorResponse(parsed.error);
+      return uploadValidationErrorResponse(parsed.error, formData);
+    }
+
+    const fileMetadataValidation = validateArticleImageFile(file);
+
+    if (!fileMetadataValidation.ok) {
+      return fileValidationErrorResponse(fileMetadataValidation, formData);
+    }
+
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const fileContentValidation = validateArticleImageFile(file, fileBuffer);
+
+    if (!fileContentValidation.ok) {
+      return fileValidationErrorResponse(fileContentValidation, formData);
     }
 
     const storageSupabase = createSupabaseAdminClient();
@@ -175,12 +253,11 @@ export async function POST(request: Request) {
       return bucketErrorResponse;
     }
 
-    const storagePath = createStoragePath(parsed.data.file.type, parsed.data.folder, parsed.data.scopeId);
+    const storagePath = createStoragePath(fileContentValidation.extension, parsed.data.folder, parsed.data.scopeId);
     const storageFileName = storagePath.split("/").pop() ?? storagePath;
-    const fileBuffer = Buffer.from(await parsed.data.file.arrayBuffer());
     const { error: uploadError } = await storageSupabase.storage.from(articleImageBucket).upload(storagePath, fileBuffer, {
       cacheControl: "31536000",
-      contentType: parsed.data.file.type,
+      contentType: fileContentValidation.mimeType,
       upsert: false
     });
 
@@ -188,14 +265,17 @@ export async function POST(request: Request) {
       logStorageError("upload", uploadError, {
         bucket: articleImageBucket,
         path: storagePath,
-        contentType: parsed.data.file.type,
-        size: parsed.data.file.size
+        contentType: fileContentValidation.mimeType,
+        size: file.size
       });
+
+      const message = getStorageErrorMessage(uploadError);
 
       return NextResponse.json(
         {
           ok: false,
-          message: getStorageErrorMessage(uploadError)
+          error: message,
+          message
         },
         { status: getStorageErrorStatus(uploadError) }
       );
@@ -212,19 +292,21 @@ export async function POST(request: Request) {
           name: storageFileName,
           path: storagePath,
           href: publicUrl,
-          size: parsed.data.file.size,
-          type: parsed.data.file.type
+          size: file.size,
+          type: fileContentValidation.mimeType
         }
       },
       { status: 201 }
     );
   } catch (error) {
     console.error("[admin.upload.unexpected]", error);
+    const message = getUnexpectedUploadErrorMessage(error);
 
     return NextResponse.json(
       {
         ok: false,
-        message: getUnexpectedUploadErrorMessage(error)
+        error: message,
+        message
       },
       { status: 500 }
     );

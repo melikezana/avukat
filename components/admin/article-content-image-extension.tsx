@@ -25,10 +25,15 @@ import {
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Area, MediaSize, Point } from "react-easy-crop";
+import {
+  adminImageAllowedTypes,
+  adminImageMaxUploadSizeBytes,
+  isAllowedAdminImageFile
+} from "@/components/admin/image-upload-rules";
 import { cn } from "@/lib/utils";
 
-export const contentImageAllowedTypes = ["image/jpeg", "image/png", "image/webp"];
-export const contentImageMaxUploadSizeBytes = 5 * 1024 * 1024;
+export const contentImageAllowedTypes = adminImageAllowedTypes;
+export const contentImageMaxUploadSizeBytes = adminImageMaxUploadSizeBytes;
 export const contentImageMaxAltTextLength = 160;
 
 const maxCaptionLength = 240;
@@ -293,12 +298,12 @@ function getSafeTarget(value?: string | null) {
 }
 
 function validateImageFile(file: File) {
-  if (!contentImageAllowedTypes.includes(file.type)) {
+  if (!isAllowedAdminImageFile(file)) {
     return "Sadece JPG, PNG veya WebP görsel yükleyebilirsiniz.";
   }
 
   if (file.size > contentImageMaxUploadSizeBytes) {
-    return `Görsel en fazla ${formatBytes(contentImageMaxUploadSizeBytes)} olabilir.`;
+    return `Görsel en fazla ${formatBytes(contentImageMaxUploadSizeBytes)} olabilir. Seçilen dosya: ${formatBytes(file.size)} (${file.size} byte).`;
   }
 
   if (file.size === 0) {

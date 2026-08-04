@@ -3,28 +3,14 @@
 import Image from "next/image";
 import { Image as ImageIcon, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { useId, useRef, useState } from "react";
+import {
+  adminImageAllowedTypes as allowedImageTypes,
+  adminImageMaxUploadSizeBytes as maxUploadSizeBytes,
+  formatUploadBytes,
+  isAllowedAdminImageFile
+} from "@/components/admin/image-upload-rules";
+import { getUploadErrorMessage, getUploadResponse } from "@/components/admin/upload-response";
 import { cn } from "@/lib/utils";
-
-const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
-const maxUploadSizeBytes = 5 * 1024 * 1024;
-
-type UploadResponse =
-  | {
-      ok: true;
-      file: {
-        href: string;
-        path: string;
-        size: number;
-        type: string;
-      };
-    }
-  | {
-      ok: false;
-      message?: string;
-      issues?: Array<{
-        message?: string;
-      }>;
-    };
 
 type ArticleCoverUploadProps = {
   value: string;
@@ -38,23 +24,7 @@ function isRemoteImage(src: string) {
 }
 
 function formatBytes(bytes: number) {
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function getUploadResponse(responseText: string): UploadResponse | null {
-  try {
-    return JSON.parse(responseText) as UploadResponse;
-  } catch {
-    return null;
-  }
-}
-
-function getUploadErrorMessage(response: UploadResponse | null) {
-  if (response?.ok === false) {
-    return response.message || response.issues?.find((issue) => issue.message)?.message;
-  }
-
-  return undefined;
+  return formatUploadBytes(bytes);
 }
 
 export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange }: ArticleCoverUploadProps) {
@@ -78,12 +48,12 @@ export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange
   }
 
   function validateFile(file: File) {
-    if (!allowedImageTypes.includes(file.type)) {
+    if (!isAllowedAdminImageFile(file)) {
       return "Sadece JPG, PNG veya WebP görsel yükleyebilirsiniz.";
     }
 
     if (file.size > maxUploadSizeBytes) {
-      return `Kapak görseli en fazla ${formatBytes(maxUploadSizeBytes)} olabilir.`;
+      return `Kapak görseli en fazla ${formatBytes(maxUploadSizeBytes)} olabilir. Seçilen dosya: ${formatBytes(file.size)} (${file.size} byte).`;
     }
 
     if (file.size === 0) {
@@ -182,7 +152,7 @@ export function ArticleCoverUpload({ value, title, onChange, onUploadStateChange
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     const file = event.dataTransfer.files?.[0];
 
-    if (!file || !file.type.startsWith("image/")) {
+    if (!file) {
       setIsDragging(false);
       return;
     }

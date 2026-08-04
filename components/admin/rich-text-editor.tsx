@@ -38,28 +38,11 @@ import {
   contentImageMaxUploadSizeBytes as maxUploadSizeBytes,
   type UploadedContentImage
 } from "@/components/admin/article-content-image-extension";
+import { isAllowedAdminImageFile } from "@/components/admin/image-upload-rules";
+import { getUploadErrorMessage, getUploadResponse } from "@/components/admin/upload-response";
 import { cn } from "@/lib/utils";
 
 const contentImageFolder = "article-content";
-
-type UploadResponse =
-  | {
-      ok: true;
-      file: {
-        name?: string;
-        href: string;
-        path: string;
-        size: number;
-        type: string;
-      };
-    }
-  | {
-      ok: false;
-      message?: string;
-      issues?: Array<{
-        message?: string;
-      }>;
-    };
 
 type RichTextEditorProps = {
   id: string;
@@ -256,22 +239,6 @@ function getSafeImageStyle(value: string) {
   return safeRules.join("; ");
 }
 
-function getUploadResponse(responseText: string): UploadResponse | null {
-  try {
-    return JSON.parse(responseText) as UploadResponse;
-  } catch {
-    return null;
-  }
-}
-
-function getUploadErrorMessage(response: UploadResponse | null) {
-  if (response?.ok === false) {
-    return response.message || response.issues?.find((issue) => issue.message)?.message;
-  }
-
-  return undefined;
-}
-
 function isSafeEditorUrl(value: string) {
   try {
     const url = new URL(value, window.location.origin);
@@ -354,12 +321,12 @@ function sanitizePastedHtml(html: string) {
 }
 
 function validateImageFile(file: File) {
-  if (!allowedImageTypes.includes(file.type)) {
+  if (!isAllowedAdminImageFile(file)) {
     return "Sadece JPG, PNG veya WebP görsel yükleyebilirsiniz.";
   }
 
   if (file.size > maxUploadSizeBytes) {
-    return `Görsel en fazla ${formatBytes(maxUploadSizeBytes)} olabilir.`;
+    return `Görsel en fazla ${formatBytes(maxUploadSizeBytes)} olabilir. Seçilen dosya: ${formatBytes(file.size)} (${file.size} byte).`;
   }
 
   if (file.size === 0) {
@@ -625,7 +592,7 @@ export function RichTextEditor({
 
         const files = Array.from(event.dataTransfer?.files ?? []);
 
-        if (!files.some((file) => file.type.startsWith("image/"))) {
+        if (files.length === 0) {
           return false;
         }
 
@@ -870,7 +837,7 @@ export function RichTextEditor({
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     const files = Array.from(event.dataTransfer.files ?? []);
 
-    if (!files.some((file) => file.type.startsWith("image/"))) {
+    if (files.length === 0) {
       setIsDragging(false);
       return;
     }
